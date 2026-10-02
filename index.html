@@ -923,35 +923,6 @@ async function initSupabaseAuth(){
 loadGoogleMaps();initSupabaseAuth();setInterval(()=>{if(state.session){if(state.session.role==='ADMIN'||state.session.role==='SUPER_ADMIN')refreshAdminDashboard();else refreshBackend()}},5000);window.addEventListener('error',e=>{console.error(e.error||e.message);const d=$('clickDebug');if(d){d.textContent='App error: '+(e.message||'Unknown error');d.style.display='block';d.style.background='#a61e1e'}});
 window.addEventListener('unhandledrejection',e=>{console.error(e.reason);const d=$('clickDebug');if(d){d.textContent='App error: '+(e.reason?.message||'Promise error');d.style.display='block';d.style.background='#a61e1e'}});
 /* Direct login-gate event bridge: capture both touch and click before any other handler. */
-function bindLoginGateButtons(){
-  const login=document.getElementById('loginStartBtn');
-  const signup=document.getElementById('createAccountBtn');
-  const forgot=document.getElementById('forgotPasswordBtn');
-  const bind=(el,fn)=>{
-    if(!el||el.dataset.authBound==='1')return;
-    el.dataset.authBound='1';
-    let lastRun=0;
-    const run=e=>{
-      e.preventDefault();
-      e.stopPropagation();
-      e.stopImmediatePropagation?.();
-      const now=Date.now();
-      if(now-lastRun<450)return;
-      lastRun=now;
-      try{fn()}catch(err){
-        console.error('Auth action:',err);
-        const s=document.getElementById('loginGateStatus');
-        if(s)s.textContent='Please try again. '+(err?.message||'Authentication error');
-      }
-    };
-    el.addEventListener('pointerup',run,{passive:false,capture:true});
-    el.addEventListener('click',run,{passive:false,capture:true});
-  };
-  bind(login,()=>window.assamDriveAuth('LOGIN'));
-  bind(signup,()=>window.assamDriveAuth('SIGNUP'));
-  bind(forgot,()=>window.assamDriveForgotPassword());
-}
-bindLoginGateButtons();
 document.addEventListener('click',e=>{const b=e.target.closest('button');if(b&&!b.disabled){console.debug('Assam Drive click:',b.textContent.trim()||b.id)}},true);
 
 if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>r.unregister())).catch(()=>{});}
