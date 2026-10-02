@@ -110,7 +110,7 @@ body.login-screen .login-gate{min-height:100dvh;background:#070707;color:#fff;di
 <button class="login-otp" id="loginGateOtp" type="button">GET EMAIL OTP</button>
 <div class="login-status" id="loginGateStatus"></div>
 <div class="small" style="color:#77737d;margin-top:6px">Email OTP is enabled for free testing. Mobile SMS OTP will be activated later when an SMS provider is connected.</div>
-<div class="login-actions"><button type="button" class="secondary" id="loginPasswordBtn">🔐 Login with Password</button><button type="button" class="create-account-btn" id="createAccountBtn" onclick="event.preventDefault();event.stopPropagation();openRoleChooser()" ontouchend="event.preventDefault();this.click()">✨ Create Account</button></div><div class="login-or">OR CONTINUE WITH</div>
+<div class="login-actions"><button type="button" class="secondary" id="loginPasswordBtn">🔐 Login with Password</button><button type="button" class="create-account-btn" id="createAccountBtn" onclick="event.preventDefault();event.stopPropagation();window.__openCreateAccount(event)">✨ Create Account</button></div><div class="login-or">OR CONTINUE WITH</div>
 <div class="login-alt">
 <button type="button" onclick="gateGoogleLogin()">G <span>Google</span></button>
 <button type="button" onclick="gateEmailLogin()">✉ <span>Email</span></button>
@@ -235,6 +235,9 @@ if(!Number.isFinite(+state.seq))state.seq=1001;
 if(!state.drivers.length)state.drivers.push(JSON.parse(JSON.stringify(defaults.drivers[0])));
 state.drivers.forEach(d=>{d.documents=Array.isArray(d.documents)?d.documents:[];d.checks=Array.isArray(d.checks)?d.checks:[];d.earn=Number.isFinite(+d.earn)?+d.earn:0;d.verification=d.verification||'PENDING';d.online=!!d.online;d.vehicle=d.vehicle||'BIKE';d.registration=d.registration||'';d.phone=d.phone||'';d.name=d.name||'Driver'});
 const $=id=>document.getElementById(id);
+document.body.classList.add('login-screen');
+$('sidemenu')?.style.setProperty('display','none','important');
+$('sideback')?.style.setProperty('display','none','important');
 window.__openCreateAccount=function(e){if(e){e.preventDefault();e.stopPropagation()}try{openModal('authModal');chooseRole('CUSTOMER');gateSetStatus('Create your account with Name, mobile number, Gmail OTP and password.',true)}catch(err){console.error('Create Account error',err);const s=$('loginGateStatus');if(s)s.textContent='Please try again. App error: '+(err?.message||'unknown')}};
 async function syncCurrentUserToSupabase(){
  const u=currentUser();if(!u||!supabaseReady||!supabase)return;
@@ -266,7 +269,16 @@ function renderFare(){$('fare').textContent='₹'+Math.round(estimate());$('rout
 function render(){
  renderFare();
  const logged=!!state.session;
- if(!logged){closeSide();closeModal('authModal');}
+ const sm=$('sidemenu'), sb=$('sideback');
+ if(!logged){
+   closeSide();
+   closeModal('authModal');
+   sm?.style.setProperty('display','none','important');
+   sb?.style.setProperty('display','none','important');
+ }else{
+   sm?.style.removeProperty('display');
+   sb?.style.removeProperty('display');
+ }
  document.body.classList.toggle('login-screen',!logged);
  $('loginGate').classList.toggle('active',!logged);
  $('customer').classList.toggle('active',logged&&state.session.role==='CUSTOMER');
@@ -498,7 +510,7 @@ $('roleCustomerBtn')?.addEventListener('click',e=>{e.preventDefault();e.stopProp
 $('roleDriverBtn')?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();chooseRole('DRIVER')},true);
 authModal?.addEventListener('click',e=>{if(e.target===authModal)closeModal('authModal')},true);
 
-$('createAccountBtn')?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();openRoleChooser()},{capture:false});
+$('createAccountBtn')?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();window.__openCreateAccount(e)},{capture:true});
 $('menuBtn')?.addEventListener('click',openSide);
 $('sideClose')?.addEventListener('click',closeSide);
 $('sideback')?.addEventListener('click',closeSide);
