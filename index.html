@@ -1,3 +1,33 @@
+function rideCustomer(r){
+ let h='<div class="stack"><span class="pill '+(r.status==='RIDE_STARTED'?'ok':r.status==='COMPLETED'?'ok':'warn')+'">'+esc(r.status)+'</span><b>'+esc(r.vehicle)+' • '+esc(r.driverName||'Assigned driver')+'</b>';
+ if(r.driverId||r.driverPhone)h+='<div class="success"><b>Driver phone: '+esc(r.driverPhone||'Available in active ride')+'</b></div>';
+ h+='<span class="muted">'+esc(r.pickup)+' → '+esc(r.destination)+'</span>';
+ if(r.status==='OTP_PENDING')h+='<div class="notice">Ride OTP: <b style="font-size:22px;letter-spacing:4px">'+esc(r.otp||'Check notification')+'</b><br><span class="small">Give this OTP to the driver only after reaching the pickup point.</span></div>';
+ if(r.status==='RIDE_STARTED')h+='<div class="notice">Live location sharing is active during this ride.</div><button class="danger" onclick="sos()">SOS</button><button class="primary" onclick="completeRide('+r.id+')">Complete ride</button>';
+ if(r.status==='COMPLETED'&&r.paymentStatus!=='PAID')h+='<div class="notice">Payment pending</div><div class="row"><button class="secondary" onclick="payRide('+r.id+',\'CASH\')">Cash</button><button class="primary" onclick="payRide('+r.id+',\'UPI\')">UPI</button></div>';
+ return h+'</div>'
+}
+function rideRequest(r){return '<div class="ride"><div class="ride-title"><b>New ride #'+r.id+'</b><span class="pill warn">'+r.vehicle+'</span></div><div>'+esc(r.pickup)+' → '+esc(r.destination)+'</div><div class="small muted">Estimated ₹'+r.fare+' • '+r.distance+' km</div><div class="row" style="margin-top:9px"><button class="primary" onclick="acceptRide('+r.id+')">Accept</button><button class="danger" onclick="rejectRide('+r.id+')">Reject</button></div></div>'}
+function rideDriver(r){return '<div class="ride"><b>Ride #'+r.id+'</b><div class="small">'+esc(r.pickup)+' → '+esc(r.destination)+'</div><div style="margin-top:8px"><b>OTP verification</b><div class="row"><input id="otpInput" maxlength="4" inputmode="numeric" placeholder="4-digit OTP" style="padding:10px;border:1px solid var(--line);border-radius:10px;width:150px"><button class="primary" onclick="verifyOtp('+r.id+')">Verify</button></div><div class="small muted">Maximum 2 attempts. Second wrong attempt cancels the ride.</div></div></div>'}
+async function book(){
+ if(!state.session||state.session.role!=='CUSTOMER'){openModal('authModal');chooseRole('CUSTOMER');toast('Login/register as Customer first');return}
+ if(activeRide()){toast('Finish the current ride first');return}
+ try{
+  await calculateGoogleRoute();
+  const p=coordsFromInput('pickup'),d=coordsFromInput('destination');
+  if(!p||!d)throw new Error('Select pickup and destination on the map');
+  const v=vehicle(),km=Math.max(.1,+$('distance').value||0),mins=Math.max(1,+$('minutes').value||1);
+  const r=await dbRpc('create_ride',{p_vehicle:v,p_pickup:$('pickup').value.trim(),p_destination:$('destination').value.trim(),p_pickup_lat:p.lat,p_pickup_lng:p.lng,p_destination_lat:d.lat,p_destination_lng:d.lng,p_distance_km:km,p_duration_minutes:mins});
+  await refreshBackend();
+  toast(r?.driver_id?'Ride assigned to a verified nearby driver':'Ride request created; waiting for a nearby driver');
+ }catch(e){console.error(e);toast(e.message||'Could not create ride')}
+}
+async function acceptRide(id){try{await dbRpc('claim_ride',{p_ride_id:id});await refreshBackend();toast('Ride accepted. Customer OTP is now available to the customer.')}catch(e){toast(e.message||'Ride is no longer available')}}
+async function rejectRide(id){try{await dbRpc('cancel_ride',{p_ride_id:id,p_reason:'Driver rejected'});await refreshBackend();toast('Ride rejected')}catch(e){toast(e.message||'Could not reject ride')}}
+async function verifyOtp(id){const val=($('otpInput').value||'').replace(/\D/g,'');if(!/^\d{4}$/.test(val)){toast('Enter the 4-digit OTP');return}try{const r=await dbRpc('verify_ride_otp',{p_ride_id:id,p_otp:val});await refreshBackend();if(r?.status==='CANCELLED')toast('Ride cancelled after 2 wrong OTP attempts');else if(r?.status==='RIDE_STARTED')toast('OTP verified — ride started');}catch(e){toast(e.message||'OTP verification failed')}}
+async function completeRide(id){try{await dbRpc('complete_ride',{p_ride_id:id});await refreshBackend();toast('Ride completed. Select payment method.')}catch(e){toast(e.message||'Could not complete ride')}}
+async function payRide(id,method){try{await dbRpc('record_payment',{p_ride_id:id,p_method:method,p_status:'PAID'});await refreshBackend();toast('Payment marked as paid')}catch(e){toast(e.message||'Payment failed')}}
+async function sos(){const r=activeRide();if(!r){toast('No active ride');return}const p=coordsFromInput('pickup');try{await dbRpc('create_sos',{p_ride_id:r.id,p_lat:p?.lat||null,p_lng:p?.lng||null,p_message:'SOS requested from active ride'});toast('SOS recorded and sent to safety system')}catch(e){toast(e.message||'SOS could not be sent')}}
 <!doctype html>
 <html lang="en">
 <head>
@@ -572,7 +602,59 @@ async function verifyAuth(role,ep){
  await establishSupabaseUser(role,data.user);
  showSetPassword(role,'PHONE',p);
 }
-function establishSupabaseUser(role,user,profile={}){if(!user)return;const phone=profile.phone||user.user_metadata?.mobile_number||user.phone||'';const name=profile.name||user.user_metadata?.full_name||user.user_metadata?.name||(role==='CUSTOMER'?'New Customer':'New Driver');if(role==='CUSTOMER'){let u=state.customers.find(x=>x.id===user.id)||state.customers.find(x=>x.phone===phone);if(!u){u={id:user.id,name,phone,photo:''};state.customers.push(u)}else{u.id=user.id;u.name=name||u.name;u.phone=phone||u.phone}state.session={role:'CUSTOMER',id:u.id}}else{let d=state.drivers.find(x=>x.id===user.id)||state.drivers.find(x=>x.phone===phone);if(!d){d={id:user.id,name,phone,vehicle:'BIKE',registration:'',verified:false,verification:'PENDING',online:false,earn:0,photo:'',documents:[],checks:[]};state.drivers.push(d)}else{d.id=user.id;d.name=name||d.name;d.phone=phone||d.phone}state.session={role:'DRIVER',id:d.id}}}
+async function establishSupabaseUser(role,user,profile={}){
+ if(!user)return;
+ const phone=profile.phone||user.user_metadata?.mobile_number||user.phone||'';
+ const name=profile.name||user.user_metadata?.full_name||user.user_metadata?.name||(role==='CUSTOMER'?'New Customer':'New Driver');
+ if(supabaseReady&&supabase){
+   const q=await supabase.rpc('ensure_my_profile',{p_role:role,p_name:name,p_phone:phone});
+   if(q.error)console.warn('Profile backend sync:',q.error.message);
+   const row=q.data||{};
+   if(role==='CUSTOMER'){
+     const p=row; let u=state.customers.find(x=>x.id===user.id)||{};
+     Object.assign(u,{id:user.id,name:p.full_name||name,phone:p.phone||phone,photo:p.avatar_url||''});
+     if(!state.customers.includes(u))state.customers.push(u);
+     state.session={role:'CUSTOMER',id:user.id};
+   }else{
+     const p=row, drow=p.driver||{};
+     let d=state.drivers.find(x=>x.id===user.id)||{};
+     Object.assign(d,{id:user.id,name:p.full_name||name,phone:p.phone||phone,photo:p.avatar_url||'',vehicle:drow.vehicle_type||d.vehicle||'BIKE',registration:drow.registration_number||d.registration||'',verified:!!drow.verified,verification:drow.verification_status||d.verification||'PENDING',online:!!drow.online,earn:Number(d.earn||0),documents:Array.isArray(d.documents)?d.documents:[],checks:Array.isArray(d.checks)?d.checks:[]});
+     if(!state.drivers.includes(d))state.drivers.push(d);
+     state.session={role:'DRIVER',id:user.id};
+   }
+   await refreshBackend();
+ }else{
+   if(role==='CUSTOMER'){let u=state.customers.find(x=>x.id===user.id)||{id:user.id,name,phone,photo:''};u.name=name||u.name;u.phone=phone||u.phone;state.session={role:'CUSTOMER',id:user.id};if(!state.customers.includes(u))state.customers.push(u)}
+   else{let d=state.drivers.find(x=>x.id===user.id)||{id:user.id,name,phone,vehicle:'BIKE',registration:'',verified:false,verification:'PENDING',online:false,earn:0,photo:'',documents:[],checks:[]};d.name=name||d.name;d.phone=phone||d.phone;state.session={role:'DRIVER',id:user.id};if(!state.drivers.includes(d))state.drivers.push(d)}
+ }
+ render();
+}
+async function dbRpc(fn,args={}){
+ if(!supabaseReady||!supabase||!state.session)throw new Error('Account session is not ready');
+ const {data,error}=await supabase.rpc(fn,args);
+ if(error)throw error;
+ return data;
+}
+async function refreshBackend(){
+ if(!supabaseReady||!supabase||!state.session)return;
+ try{
+   const {data:rides,error}=await supabase.from('rides').select('*').order('created_at',{ascending:false}).limit(100);
+   if(error)throw error;
+   const mapped=(rides||[]).map(r=>({id:r.id,vehicle:r.vehicle_type,pickup:r.pickup_text,destination:r.destination_text,distance:Number(r.distance_km||0),minutes:Number(r.duration_minutes||0),fare:Number(r.fare||0),status:r.status,driverId:r.driver_id,driverName:null,driverPhone:r.driver_phone_snapshot||'',otp:null,created:new Date(r.created_at).getTime(),paymentStatus:r.payment_status,paymentMethod:r.payment_method,lat:r.pickup_lat,lng:r.pickup_lng}));
+   if(state.session.role==='CUSTOMER'){
+     const activeIds=mapped.filter(r=>r.status==='OTP_PENDING').map(r=>r.id);
+     if(activeIds.length){const q=await supabase.from('ride_otp').select('ride_id,customer_otp,expires_at').in('ride_id',activeIds);if(!q.error)(q.data||[]).forEach(o=>{const x=mapped.find(r=>r.id===o.ride_id);if(x&&new Date(o.expires_at)>new Date())x.otp=o.customer_otp})}
+   }
+   state.rides=mapped;
+   if(state.session.role==='DRIVER'){
+     const q=await dbRpc('get_driver_ride_queue');
+     state.rides=[...mapped,...(q||[]).map(r=>({id:r.id,vehicle:r.vehicle_type,pickup:r.pickup_text,destination:r.destination_text,distance:Number(r.distance_km||0),minutes:Number(r.duration_minutes||0),fare:Number(r.fare||0),status:r.status,driverId:r.driver_id,driverName:null,driverPhone:r.driver_phone_snapshot||'',created:new Date(r.created_at).getTime()}))].filter((x,i,a)=>a.findIndex(y=>y.id===x.id)===i);
+   }
+   const {data:drow}=await supabase.from('driver_profiles').select('*').eq('id',state.session.id).maybeSingle();
+   if(drow&&state.session.role==='DRIVER'){const d=currentUser();if(d)Object.assign(d,{vehicle:drow.vehicle_type,registration:drow.registration_number,verified:drow.verified,verification:drow.verification_status,online:drow.online,lat:drow.current_lat,lng:drow.current_lng,lastSeen:drow.last_seen_at})}
+   render();
+ }catch(e){console.warn('Backend refresh:',e.message||e)}
+}
 function editProfile(){
  const u=currentUser();
  if(!u){toast('Please login first');return}
@@ -596,10 +678,30 @@ function saveProfile(){
   rd.readAsDataURL(f);
  }else finish();
 }
-function submitDriverRegistration(){const d=currentUser();if(!d||state.session.role!=='DRIVER'){toast('Login as Driver first');return}d.name=$('regName').value.trim()||d.name;d.phone=$('regPhone').value.trim()||d.phone;d.vehicle=$('regVehicle').value;d.registration=$('regRc').value.trim();d.verification='UNDER_REVIEW';d.online=false;d.documents=[];['regDl','regId','regRcDoc','regInsurance','regPuc','regPermit','regVehiclePhoto'].forEach(id=>{const f=$(id).files[0];if(f)d.documents.push($(id).previousElementSibling.textContent||id)});d.checks=runPrecheck();closeModal('driverModal');save();toast('Documents submitted for admin verification')}
+async function submitDriverRegistration(){
+ const d=currentUser();if(!d||state.session.role!=='DRIVER'){toast('Login as Driver first');return}
+ d.name=$('regName').value.trim()||d.name;d.phone=$('regPhone').value.trim()||d.phone;d.vehicle=$('regVehicle').value;d.registration=$('regRc').value.trim();
+ const checks=runPrecheck();if(checks.some(x=>x.includes('missing'))){toast('Please upload all required documents');return}
+ if(!supabaseReady||!supabase){toast('Secure verification service is unavailable');return}
+ try{
+   const up=await supabase.from('driver_profiles').upsert({id:d.id,vehicle_type:d.vehicle,registration_number:d.registration,verification_status:'UNDER_REVIEW',verified:false,online:false,emergency_contact:$('regEmergency').value.trim(),upi_id:$('regUpi').value.trim(),updated_at:new Date().toISOString()},{onConflict:'id'});
+   if(up.error)throw up.error;
+   const bucket='driver-documents';
+   for(const id of ['regDl','regId','regRcDoc','regInsurance','regPuc','regPermit','regVehiclePhoto']){
+     const f=$(id)?.files?.[0];if(!f)continue;
+     const path=d.id+'/'+Date.now()+'-'+f.name.replace(/[^a-zA-Z0-9._-]/g,'_');
+     const put=await supabase.storage.from(bucket).upload(path,f,{upsert:false,contentType:f.type||'application/octet-stream'});
+     if(put.error)throw put.error;
+     const type=id==='regDl'?'DRIVING_LICENSE':id==='regId'?'IDENTITY':id==='regRcDoc'?'RC':id==='regInsurance'?'INSURANCE':id==='regPuc'?'PUC':id==='regPermit'?'PERMIT_FITNESS':'VEHICLE_PHOTO';
+     const ins=await supabase.from('driver_documents').insert({driver_id:d.id,document_type:type,storage_path:path,original_filename:f.name,mime_type:f.type,file_size:f.size});
+     if(ins.error)throw ins.error;
+   }
+   d.verification='UNDER_REVIEW';d.verified=false;d.online=false;closeModal('driverModal');await refreshBackend();toast('Documents securely submitted for admin verification');
+ }catch(e){console.error(e);toast('Document submission failed: '+(e.message||'Please try again'))}
+}
 function runPrecheck(){const d=currentUser(),checks=[];if(!d.name)checks.push('name missing');if(!d.registration)checks.push('vehicle registration missing');if($('regDl').files.length===0)checks.push('licence missing');if($('regRcDoc').files.length===0)checks.push('RC missing');if($('regInsurance').files.length===0)checks.push('insurance missing');if($('regPuc').files.length===0)checks.push('PUC missing');return checks.length?checks:['basic fields present'];}
-function approveDriver(id){const d=state.drivers.find(x=>x.id===id);if(!d)return;d.verification='APPROVED';d.verified=true;d.online=false;if(!d.id.startsWith('DRV-'))d.id=d.id;save();toast('Driver approved; ID card generated')}
-function rejectDriver(id){const d=state.drivers.find(x=>x.id===id);if(!d)return;d.verification='REJECTED';d.verified=false;d.online=false;save();toast('Driver rejected')}
+async function approveDriver(id){toast('Driver approval is handled by the protected admin verification function.');}
+async function rejectDriver(id){toast('Driver rejection is handled by the protected admin verification function.');}
 function rideCustomer(r){const d=state.drivers.find(x=>x.id===r.driverId);let h='<div class="stack"><span class="pill '+(r.status==='RIDE_STARTED'?'ok':'warn')+'">'+r.status+'</span><b>'+esc(r.vehicle)+' • '+esc(r.driverName||'Driver')+'</b>';if(d&&r.status!=='SEARCHING')h+='<div class="success"><b>Driver phone: '+esc(d.phone)+'</b><br>'+esc(d.vehicle)+' • '+esc(d.registration)+'</div>';h+='<span class="muted">'+esc(r.pickup)+' → '+esc(r.destination)+'</span>';if(r.status==='OTP_PENDING')h+='<div class="notice">Ride OTP: <b style="font-size:22px">'+r.otp+'</b></div>';if(r.status==='RIDE_STARTED')h+='<div class="notice">Live location sharing is active for this ride.</div><button class="danger" onclick="sos()">SOS</button><button class="primary" onclick="completeRide()">Complete ride</button>';return h+'</div>'}
 function rideRequest(r){return '<div class="ride"><div class="ride-title"><b>New ride #'+r.id+'</b><span class="pill warn">'+r.vehicle+'</span></div><div>'+esc(r.pickup)+' → '+esc(r.destination)+'</div><div class="small muted">Estimated ₹'+r.fare+' • '+r.distance+' km</div><div class="row" style="margin-top:9px"><button class="primary" onclick="acceptRide()">Accept</button><button class="danger" onclick="rejectRide()">Reject</button></div></div>'}
 function rideDriver(r){return '<div class="ride"><b>Ride #'+r.id+'</b><div class="small">'+esc(r.pickup)+' → '+esc(r.destination)+'</div><div style="margin-top:8px"><b>OTP verification</b><div class="row"><input id="otpInput" maxlength="4" inputmode="numeric" placeholder="4-digit OTP" style="padding:10px;border:1px solid var(--line);border-radius:10px;width:150px"><button class="primary" onclick="verifyOtp()">Verify</button></div><div class="small muted">Maximum 2 attempts. Second wrong attempt cancels the ride.</div></div></div>'}
@@ -635,10 +737,10 @@ $('logoutBtn').onclick=async()=>{
   toast('Logged out successfully');
 };
 $('driverRegisterBtn').onclick=()=>{if(!state.session||state.session.role!=='DRIVER'){openModal('authModal');chooseRole('DRIVER');toast('Login/register as Driver first')}else{const d=currentUser();$('regName').value=d.name;$('regPhone').value=d.phone;$('regVehicle').value=d.vehicle;$('regRc').value=d.registration;openModal('driverModal')}};
-$('onlineBtn').onclick=()=>{const d=currentUser();if(!d||state.session.role!=='DRIVER'){openModal('authModal');chooseRole('DRIVER');return}if(d.verification!=='APPROVED'){toast('Admin approval is required before going online');return}d.online=!d.online;save();toast(d.online?'Driver is online':'Driver is offline')};
+$('onlineBtn').onclick=async()=>{const d=currentUser();if(!d||state.session.role!=='DRIVER'){openModal('authModal');chooseRole('DRIVER');return}if(d.verification!=='APPROVED'){toast('Admin approval is required before going online');return}try{const pos=coordsFromInput('pickup')||null;await dbRpc('set_driver_presence',{p_online:!d.online,p_lat:pos?.lat||null,p_lng:pos?.lng||null});await refreshBackend();toast(d.online?'Driver is online':'Driver is offline')}catch(e){toast(e.message||'Could not change online status')}};
 $('bookBtn').onclick=book;$('locBtn').onclick=()=>startLocationWatch(true);$('routeBtn').onclick=calculateGoogleRoute;
 ['distance','minutes'].forEach(id=>$(id).oninput=renderFare);document.querySelectorAll('input[name=vehicle]').forEach(x=>x.onchange=renderFare);
-$('saveFare').onclick=()=>{state.fare.BIKE.km=+$('bikeRate').value||10;state.fare.AUTO.km=+$('autoRate').value||14;state.fare.CAR.km=+$('carRate').value||18;save();toast('Fare settings saved')};
+$('saveFare').onclick=async()=>{if(!supabaseReady||!supabase){toast('Backend unavailable');return}toast('Fare settings are server-controlled; use the protected admin panel.');};
 document.querySelectorAll('.navbtn[data-view]').forEach(b=>b.onclick=()=>{if(!state.session){openModal('authModal');chooseRole(b.dataset.view==='driver'?'DRIVER':'CUSTOMER');return}if(b.dataset.view.toUpperCase()!==state.session.role){toast('Please use the correct account type');return}render()});
 
 const GOOGLE_MAPS_KEY='AIzaSyAOVYRIgupAurZup5y1PRh8Ismb1A3lLao';
@@ -736,13 +838,12 @@ function startLocationWatch(centerMap=true){
   navigator.geolocation.getCurrentPosition(p=>handleUserLocation(p,centerMap),()=>setLocationStatus('Location permission was not granted.'),{enableHighAccuracy:true,timeout:12000,maximumAge:5000});
 }
 function handleUserLocation(p,centerMap){
-  const pos={lat:p.coords.latitude,lng:p.coords.longitude};
-  $('pickup').value='Current location';$('pickup').dataset.lat=pos.lat;$('pickup').dataset.lng=pos.lng;
-  if(googleMap){
-    if(userLocationMarker)userLocationMarker.setPosition(pos);else userLocationMarker=new google.maps.Marker({map:googleMap,position:pos,title:'Your current location'});
-    if(centerMap)googleMap.setCenter(pos);
-  }
-  setLocationStatus('Current GPS location detected: '+pos.lat.toFixed(5)+', '+pos.lng.toFixed(5),true);
+ const pos={lat:p.coords.latitude,lng:p.coords.longitude};
+ const pickup=$('pickup');
+ if(pickup&&!pickup.value){pickup.value='Current location';pickup.dataset.lat=pos.lat;pickup.dataset.lng=pos.lng}
+ if(googleMap){if(userLocationMarker)userLocationMarker.setPosition(pos);else userLocationMarker=new google.maps.Marker({map:googleMap,position:pos,title:'Your current location'});if(centerMap)googleMap.setCenter(pos)}
+ setLocationStatus('Current GPS location detected: '+pos.lat.toFixed(5)+', '+pos.lng.toFixed(5),true);
+ if(state.session?.role==='DRIVER'&&supabaseReady&&supabase)dbRpc('update_driver_position',{p_lat:pos.lat,p_lng:pos.lng,p_accuracy:p.coords.accuracy||null}).catch(()=>{});
 }
 
 async function initSupabaseAuth(){
@@ -788,7 +889,7 @@ async function initSupabaseAuth(){
     showSplashSlow('Network problem. Check your connection and retry.');
   }
 }
-loadGoogleMaps();initSupabaseAuth();window.addEventListener('error',e=>{console.error(e.error||e.message);const d=$('clickDebug');if(d){d.textContent='App error: '+(e.message||'Unknown error');d.style.display='block';d.style.background='#a61e1e'}});
+loadGoogleMaps();initSupabaseAuth();setInterval(()=>{if(state.session)refreshBackend()},5000);window.addEventListener('error',e=>{console.error(e.error||e.message);const d=$('clickDebug');if(d){d.textContent='App error: '+(e.message||'Unknown error');d.style.display='block';d.style.background='#a61e1e'}});
 window.addEventListener('unhandledrejection',e=>{console.error(e.reason);const d=$('clickDebug');if(d){d.textContent='App error: '+(e.reason?.message||'Promise error');d.style.display='block';d.style.background='#a61e1e'}});
 document.addEventListener('click',e=>{const b=e.target.closest('button');if(b&&!b.disabled){console.debug('Assam Drive click:',b.textContent.trim()||b.id)}},true);
 
