@@ -66,7 +66,7 @@ body.login-screen .login-gate{min-height:100dvh;background:
 .login-title{font-size:25px;font-weight:800;margin-top:38px;margin-bottom:7px}
 .login-subtitle{color:#8e9c96;font-size:14px;margin-bottom:22px}
 .premium-actions{width:100%;display:grid;gap:11px}
-.login-main-btn{width:100%;min-height:54px;border-radius:16px;font-size:16px;font-weight:850;touch-action:manipulation}
+.login-main-btn{width:100%;min-height:54px;border-radius:16px;font-size:16px;font-weight:850;touch-action:manipulation}.login-link-btn{background:transparent;color:#8fb8a8;padding:8px;font-weight:750;text-decoration:underline;text-underline-offset:3px;touch-action:manipulation}
 .login-main-btn.primary{background:linear-gradient(135deg,#087a52,#10a66c);box-shadow:0 12px 30px #087a5238}
 .login-main-btn.create-account-btn{background:#ffffff0b;color:#fff;border:1px solid #ffffff20;box-shadow:0 8px 25px #0003}
 .login-main-btn.create-account-btn:hover{background:#ffffff12;border-color:#087a52}
@@ -117,8 +117,9 @@ body.login-screen .login-gate{min-height:100dvh;background:
   <div class="login-title">Welcome</div>
   <div class="login-subtitle">Safe, simple rides across Assam.</div>
   <div class="login-actions premium-actions">
-    <button type="button" class="primary login-main-btn" id="loginStartBtn">🔐 Login</button>
-    <button type="button" class="create-account-btn login-main-btn" id="createAccountBtn">✨ Create Account</button>
+    <button type="button" class="primary login-main-btn" id="loginStartBtn">🔐 Sign In</button>
+    <button type="button" class="create-account-btn login-main-btn" id="createAccountBtn">✨ Sign Up / Create Account</button>
+    <button type="button" class="login-link-btn" id="forgotPasswordBtn">Forgot Password?</button>
   </div>
   <div class="login-note"><span>●</span> Customer & Driver accounts are separate</div>
   <div class="login-terms">By continuing, you agree to Assam Drive's<br><u>Terms of Service</u> and <u>Privacy Policy</u></div>
@@ -364,6 +365,7 @@ function openPasswordLogin(role,mode='PHONE'){
  $('authForm').innerHTML=passwordLoginForm(role,mode);
 }
 let selectedAccountRole='';
+let authIntent='BOTH';
 function selectAccountRole(role){
   selectedAccountRole=role;
   const cb=$('roleCustomerBtn'),db=$('roleDriverBtn'),next=$('roleNextBtn');
@@ -377,15 +379,12 @@ function nextAccountRole(){
   if(!selectedAccountRole){toast('Please select Customer or Driver first');return}
   chooseRole(selectedAccountRole);
 }
-function openRoleChooser(){
+function openRoleChooser(intent='BOTH'){
   if(state.session){toast('You are already logged in');return}
-  closeSide();
-  openModal('authModal');
-  selectedAccountRole='';
+  closeSide();authIntent=intent||'BOTH';openModal('authModal');selectedAccountRole='';
   const form=$('authForm');
-  if(form)form.innerHTML='<div class="small muted" style="text-align:center;margin-top:2px">Choose Customer or Driver above.</div>';
-  $('roleCustomerBtn')?.classList.remove('selected');
-  $('roleDriverBtn')?.classList.remove('selected');
+  if(form)form.innerHTML='<div class="small muted" style="text-align:center;margin-top:2px">Choose Customer or Driver.</div>';
+  $('roleCustomerBtn')?.classList.remove('selected');$('roleDriverBtn')?.classList.remove('selected');
 }
 function chooseRole(role){
   selectedAccountRole=role;
@@ -394,7 +393,9 @@ function chooseRole(role){
   if(db)db.classList.toggle('selected',role==='DRIVER');
   const title=role==='DRIVER'?'Driver':'Customer';
   const icon=role==='DRIVER'?'🚗':'👤';
-  $('authForm').innerHTML='<div class="stack"><div class="notice"><b>'+icon+' '+title+' account</b><br>This is a separate '+title.toLowerCase()+' account flow. Create your account or login with your '+(role==='DRIVER'?'Driver':'Customer')+' credentials.</div><button class="primary" type="button" onclick="startAccountSignup(\''+role+'\')">🆕 Create '+title+' Account</button><button class="secondary" type="button" onclick="openPasswordLogin(\''+role+'\',\'EMAIL\')">🔐 '+title+' Login</button><button class="ghost" type="button" onclick="openRoleChooser()">← Choose '+(role==='DRIVER'?'Customer':'Driver')+' instead</button></div>';
+  if(authIntent==='LOGIN'){openPasswordLogin(role,'EMAIL');return}
+  if(authIntent==='SIGNUP'){startAccountSignup(role);return}
+  $('authForm').innerHTML='<div class="stack"><div class="notice"><b>'+icon+' '+title+' account</b><br>Choose Sign In or Sign Up for your '+title.toLowerCase()+' account.</div><button class="primary" type="button" onclick="openPasswordLogin(\''+role+'\',\'EMAIL\')">🔐 Sign In with Gmail</button><button class="secondary" type="button" onclick="startAccountSignup(\''+role+'\')">✨ Sign Up / Create Account</button><button class="ghost" type="button" onclick="openRoleChooser(authIntent)">← Change account type</button></div>';
 }
 function startAccountSignup(role){
  $('authForm').innerHTML='<div class="stack"><div class="field"><label>Full name</label><input id="signupName" class="login-password" type="text" autocomplete="name" placeholder="Enter your full name"></div><div class="field"><label>Mobile number</label><div class="login-phone"><div class="country">+91</div><input id="signupPhone" inputmode="tel" autocomplete="tel" placeholder="10-digit mobile number"></div><div class="small muted">Mobile number is saved with your account. SMS OTP verification will be added later.</div></div><div class="field"><label>Gmail / Email address</label><input id="signupEmail" class="login-password" type="email" autocomplete="email" placeholder="you@gmail.com"></div><button class="primary" type="button" onclick="sendSignupEmailOtp(\''+role+'\')">Send Gmail OTP</button><button class="ghost" type="button" onclick="chooseRole(\''+role+'\')">Back</button></div>';
@@ -453,6 +454,32 @@ async function setAccountPassword(role,mode,ei,en='',ep=''){
  state.session=null;
  save();
  $('authForm').innerHTML='<div class="stack"><div class="success">Account created successfully ✓</div><div class="notice">Your Gmail is verified and your password is set. Now login to continue.</div><button class="primary" type="button" onclick="openPasswordLogin(\''+role+'\',\'EMAIL\')">🔐 Login with Gmail + Password</button></div>';
+}
+function openForgotPassword(){
+  if(state.session){toast('You are already logged in');return}
+  closeSide();openModal('authModal');
+  $('authForm').innerHTML='<div class="stack"><div class="notice"><b>🔑 Forgot Password</b><br>Enter the Gmail/email used for your Assam Drive account. We will send a secure reset link.</div><div class="field"><label>Gmail / Email address</label><input id="recoveryEmail" type="email" autocomplete="email" placeholder="you@gmail.com"></div><button class="primary" type="button" onclick="sendPasswordReset()">Send Reset Link</button><button class="ghost" type="button" onclick="openRoleChooser('LOGIN')">← Back to Sign In</button></div>';
+}
+async function sendPasswordReset(){
+  if(!supabaseReady||!supabase){toast('Login service is unavailable.');return}
+  const email=($('recoveryEmail')?.value||'').trim().toLowerCase();
+  if(!/^\S+@\S+\.\S+$/.test(email)){toast('Enter a valid Gmail/email address');return}
+  const {error}=await supabase.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
+  if(error){toast(error.message);return}
+  $('authForm').innerHTML='<div class="stack"><div class="success">Reset link sent ✓</div><div class="notice">Check Gmail Inbox and Spam/Promotions, then open the reset link to choose a new password.</div><button class="primary" type="button" onclick="openRoleChooser(\'LOGIN\')">Back to Sign In</button></div>';
+}
+function showPasswordRecovery(){
+  openModal('authModal');
+  $('authForm').innerHTML='<div class="stack"><div class="notice"><b>Set a new password</b></div><div class="field"><label>New password</label><input id="recoveryNewPassword" type="password" autocomplete="new-password" placeholder="At least 8 characters"></div><div class="field"><label>Confirm password</label><input id="recoveryConfirmPassword" type="password" autocomplete="new-password" placeholder="Repeat password"></div><button class="primary" type="button" onclick="finishPasswordRecovery()">Update Password</button></div>';
+}
+async function finishPasswordRecovery(){
+  if(!supabaseReady||!supabase){toast('Login service is unavailable.');return}
+  const p=$('recoveryNewPassword')?.value||'',q=$('recoveryConfirmPassword')?.value||'';
+  if(p.length<8){toast('Password must be at least 8 characters');return}
+  if(p!==q){toast('Passwords do not match');return}
+  const {error}=await supabase.auth.updateUser({password:p});
+  if(error){toast(error.message);return}
+  closeModal('authModal');toast('Password updated successfully. You can sign in now.');
 }
 function normalizePhone(raw){
  const digits=(raw||'').replace(/\D/g,'');
@@ -527,8 +554,9 @@ function completeRide(){const r=activeRide();if(!r||r.status!=='RIDE_STARTED')re
 function sos(){toast('SOS event logged. Connect emergency call/contacts before production launch.')}
 $('splashRetry')?.addEventListener('click',()=>location.reload());
 $('authBtn').onclick=()=>openRoleChooser();
-$('loginStartBtn')?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();openRoleChooser()});
-$('createAccountBtn')?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();openRoleChooser()});
+$('loginStartBtn')?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();openRoleChooser('LOGIN')});
+$('createAccountBtn')?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();openRoleChooser('SIGNUP')});
+$('forgotPasswordBtn')?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();openForgotPassword()});
 
 /* Harden auth modal touch/click handling: keep the side-menu backdrop behind the modal. */
 const authModal=$('authModal');
@@ -538,8 +566,8 @@ $('roleCustomerBtn')?.addEventListener('click',e=>{e.preventDefault();e.stopProp
 $('roleDriverBtn')?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();chooseRole('DRIVER')},true);
 authModal?.addEventListener('click',e=>{if(e.target===authModal)closeModal('authModal')},true);
 
-$('createAccountBtn')?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();window.__openCreateAccount(e)},{capture:true});
-$('createAccountBtn')?.addEventListener('touchend',e=>{e.preventDefault();e.stopPropagation();window.__openCreateAccount(e)},{capture:true,passive:false});
+$('createAccountBtn')?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();openRoleChooser('SIGNUP')},{capture:true});
+$('createAccountBtn')?.addEventListener('touchend',e=>{e.preventDefault();e.stopPropagation();openRoleChooser('SIGNUP')},{capture:true,passive:false});
 $('menuBtn')?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();openSide()});
 $('sideClose')?.addEventListener('click',e=>{e.preventDefault();closeSide()});
 $('sideback')?.addEventListener('click',e=>{e.preventDefault();closeSide()});
@@ -680,6 +708,7 @@ async function initSupabaseAuth(){
       await establishSupabaseUser(role,data.session.user);
     }else state.session=null;
     supabase.auth.onAuthStateChange((event,session)=>{
+      if(event==='PASSWORD_RECOVERY'){showPasswordRecovery();return}
       if(session?.user){
         const pendingRole=localStorage.getItem('assam_drive_pending_role');
         const role=session.user.user_metadata?.requested_role||pendingRole||state.session?.role||'CUSTOMER';
