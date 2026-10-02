@@ -83,7 +83,7 @@ h1,h2,h3{margin:0 0 8px}h1{font-size:27px}h2{font-size:20px}h3{font-size:16px}.m
 <div class="card span12"><h1>Admin Dashboard</h1><div class="muted">Customer, driver, documents, rides and fare operations.</div></div>
 <div class="stat span3"><span class="muted">Customers</span><b id="adminCustomers">0</b></div><div class="stat span3"><span class="muted">Drivers</span><b id="adminDrivers">0</b></div><div class="stat span3"><span class="muted">Online</span><b id="adminOnline">0</b></div><div class="stat span3"><span class="muted">Completed</span><b id="adminDone">0</b></div>
 <div class="card span8"><h2>Driver verification queue</h2><div id="verificationQueue"></div></div>
-<div class="card span4"><h2>Fare per km</h2><div class="stack"><div class="field"><label>Bike ₹/km</label><input id="bikeRate" type="number" value="10"></div><div class="field"><label>Auto ₹/km</label><input id="autoRate" type="number" value="14"></div><div class="field"><label>Car ₹/km</label><input id="carRate" type="number" value="18"></div><button class="primary" id="saveFare">Save fare settings</button><div class="small muted">Base/minimum/waiting/cancellation rules can be added to the backend fare engine later.</div></div></div>
+<div class="card span4"><h2>Fare per km (time not charged in this demo)</h2><div class="stack"><div class="field"><label>Bike ₹/km</label><input id="bikeRate" type="number" value="10"></div><div class="field"><label>Auto ₹/km</label><input id="autoRate" type="number" value="14"></div><div class="field"><label>Car ₹/km</label><input id="carRate" type="number" value="18"></div><button class="primary" id="saveFare">Save fare settings</button><div class="small muted">Base/minimum/waiting/cancellation rules can be added to the backend fare engine later.</div></div></div>
 <div class="card span12"><h2>Live rides</h2><div id="adminRides"></div></div>
 </div>
 </section>
@@ -135,7 +135,7 @@ function openModal(id){$(id).classList.add('show')} function closeModal(id){$(id
 function currentUser(){if(!state.session)return null;return state.session.role==='CUSTOMER'?state.customers.find(x=>x.id===state.session.id):state.drivers.find(x=>x.id===state.session.id)}
 function vehicle(){return document.querySelector('input[name=vehicle]:checked').value}
 function activeRide(){return state.rides.find(r=>['SEARCHING','DRIVER_ASSIGNED','OTP_PENDING','RIDE_STARTED'].includes(r.status))}
-function estimate(){const v=vehicle(),km=Math.max(.1,+$('distance').value||0),mins=Math.max(1,+$('minutes').value||1),f=state.fare[v];return Math.max(f.base+km*f.km+mins*f.min,v==='BIKE'?40:v==='AUTO'?60:100)}
+function estimate(){const v=vehicle(),km=Math.max(.1,+$('distance').value||0),mins=Math.max(1,+$('minutes').value||1),f=state.fare[v];return Math.max(f.base+km*f.km,v==='BIKE'?40:v==='AUTO'?60:100)}
 function renderFare(){$('fare').textContent='₹'+Math.round(estimate());$('routeText').textContent='Estimated distance: '+(+($('distance').value||0)).toFixed(1)+' km • '+(+($('minutes').value||0))+' min';$('bikeRateLabel').textContent='₹'+state.fare.BIKE.km+'/km';$('autoRateLabel').textContent='₹'+state.fare.AUTO.km+'/km';$('carRateLabel').textContent='₹'+state.fare.CAR.km+'/km'}
 function render(){
  renderFare();
