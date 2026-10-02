@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
+<link rel="stylesheet" href="./auth/auth-ui.css">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#087a52">
@@ -113,8 +114,8 @@ body.login-screen .login-gate{position:relative;z-index:1;min-height:100dvh;back
   <div class="small" style="color:#71857b;margin-bottom:12px">New user? Create Account • Existing user? Login • Forgot password? Get OTP</div>
   <div class="login-actions premium-actions">
     <button type="button" class="primary login-main-btn" id="loginStartBtn" onclick="window.assamDriveAuth('LOGIN')">🔐 Login <span class="small" style="opacity:.8">• Existing User</span></button>
-    <button type="button" class="create-account-btn login-main-btn" id="createAccountBtn" onclick="window.assamDriveAuth('SIGNUP')">✨ Create Account <span class="small" style="opacity:.75">• New User</span></button>
-    <button type="button" class="login-link-btn" id="forgotPasswordBtn" onclick="window.assamDriveForgotPassword()">Forgot Password? <span class="small">• Get OTP</span></button>
+    <button type="button" class="create-account-btn login-main-btn" id="createAccountBtn" onclick="AssamDriveCreateAccount.open()">✨ Create Account <span class="small" style="opacity:.75">• New User</span></button>
+    <button type="button" class="login-link-btn" id="forgotPasswordBtn" onclick="AssamDriveRecovery.open()">Forgot Password? <span class="small">• Get OTP</span></button>
   </div>
   <div class="login-note"><span>●</span> Customer & Driver accounts are separate</div>
   <div class="login-terms">By continuing, you agree to Assam Drive's<br><u>Terms of Service</u> and <u>Privacy Policy</u></div>
@@ -215,30 +216,11 @@ body.login-screen .login-gate{position:relative;z-index:1;min-height:100dvh;back
 <div class="toast" id="toast"></div><div class="click-debug" id="clickDebug">Assam Drive ready</div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="./auth/auth-session.js"></script>
+<script src="./auth/login.js"></script>
+<script src="./auth/create-account.js"></script>
+<script src="./auth/forgot-password.js"></script>
 <script>
-/* Assam Drive auth click bridge — keeps mobile auth buttons callable even if inline handlers are restricted. */
-window.assamDriveAuth=function(intent){
-  try{
-    const m=document.getElementById('authModal');
-    if(m){m.classList.add('show');m.style.display='flex';m.style.pointerEvents='auto';m.setAttribute('aria-hidden','false');}
-    if(typeof window.openRoleChooser==='function') return window.openRoleChooser(intent||'LOGIN');
-    if(typeof openRoleChooser==='function') return openRoleChooser(intent||'LOGIN');
-    const s=document.getElementById('loginGateStatus');
-    if(s)s.textContent='Login module is still starting. Please tap again.';
-  }catch(e){
-    console.error('Auth button error:',e);
-    const s=document.getElementById('loginGateStatus');
-    if(s)s.textContent='Please try again. '+(e?.message||'Authentication module error');
-  }
-};
-window.assamDriveForgotPassword=function(){
-  try{
-    if(typeof window.openForgotPassword==='function') return window.openForgotPassword();
-    if(typeof openForgotPassword==='function') return openForgotPassword();
-  }catch(e){
-    console.error('Forgot password error:',e);
-  }
-};
 function rideCustomer(r){
  let h='<div class="stack"><span class="pill '+(r.status==='RIDE_STARTED'?'ok':r.status==='COMPLETED'?'ok':'warn')+'">'+esc(r.status)+'</span><b>'+esc(r.vehicle)+' • '+esc(r.driverName||'Assigned driver')+'</b>';
  if(r.driverId||r.driverPhone)h+='<div class="success"><b>Driver phone: '+esc(r.driverPhone||'Available in active ride')+'</b></div>';
@@ -918,35 +900,6 @@ async function initSupabaseAuth(){
 loadGoogleMaps();initSupabaseAuth();setInterval(()=>{if(state.session){if(state.session.role==='ADMIN'||state.session.role==='SUPER_ADMIN')refreshAdminDashboard();else refreshBackend()}},5000);window.addEventListener('error',e=>{console.error(e.error||e.message);const d=$('clickDebug');if(d){d.textContent='App error: '+(e.message||'Unknown error');d.style.display='block';d.style.background='#a61e1e'}});
 window.addEventListener('unhandledrejection',e=>{console.error(e.reason);const d=$('clickDebug');if(d){d.textContent='App error: '+(e.reason?.message||'Promise error');d.style.display='block';d.style.background='#a61e1e'}});
 /* Direct login-gate event bridge: capture both touch and click before any other handler. */
-function bindLoginGateButtons(){
-  const login=document.getElementById('loginStartBtn');
-  const signup=document.getElementById('createAccountBtn');
-  const forgot=document.getElementById('forgotPasswordBtn');
-  const bind=(el,fn)=>{
-    if(!el||el.dataset.authBound==='1')return;
-    el.dataset.authBound='1';
-    let lastRun=0;
-    const run=e=>{
-      e.preventDefault();
-      e.stopPropagation();
-      e.stopImmediatePropagation?.();
-      const now=Date.now();
-      if(now-lastRun<450)return;
-      lastRun=now;
-      try{fn()}catch(err){
-        console.error('Auth action:',err);
-        const s=document.getElementById('loginGateStatus');
-        if(s)s.textContent='Please try again. '+(err?.message||'Authentication error');
-      }
-    };
-    el.addEventListener('pointerup',run,{passive:false,capture:true});
-    el.addEventListener('click',run,{passive:false,capture:true});
-  };
-  bind(login,()=>window.assamDriveAuth('LOGIN'));
-  bind(signup,()=>window.assamDriveAuth('SIGNUP'));
-  bind(forgot,()=>window.assamDriveForgotPassword());
-}
-bindLoginGateButtons();
 document.addEventListener('click',e=>{const b=e.target.closest('button');if(b&&!b.disabled){console.debug('Assam Drive click:',b.textContent.trim()||b.id)}},true);
 
 if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>r.unregister())).catch(()=>{});}
