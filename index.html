@@ -79,15 +79,7 @@ body.login-screen .login-gate{position:relative;z-index:1;min-height:100dvh;back
 </style>
 </head>
 <body>
-<div class="app"><div id="assamSplash" class="assam-splash" aria-label="Assam Drive loading">
-  <div class="splash-mark"><img src="./assets/assam-drive-logo.jpg" alt=""></div>
-  <div class="splash-name">Assam Drive</div>
-  <div class="splash-line">YOUR RIDE • OUR ASSAM</div>
-  <div class="splash-loader"><span></span></div>
-  <div class="splash-status" id="splashStatus">Starting Assam Drive…</div>
-  <button type="button" class="splash-retry" id="splashRetry" hidden>↻ Retry</button>
-</div>
-<header>
+<div class="app"><header>
 <div class="brand"><img class="logo" src="./assets/assam-drive-logo.jpg" alt="Assam Drive logo"><div>Assam Drive<div class="small muted">Ride booking • Assam</div></div></div>
 <button hidden type="button" class="menuBtn" id="menuBtn" aria-label="Open menu">☰</button><nav>
 <button class="navbtn active" data-view="customer">Customer</button>
@@ -334,7 +326,6 @@ function applyAuthShell(){
   if(logoutBtn) logoutBtn.hidden=!logged;
 }
 applyAuthShell();
-startSplashWatch();
 window.__openCreateAccount=function(e){if(e){e.preventDefault();e.stopPropagation()}try{const sm=$('sidemenu'),sb=$('sideback');sm?.classList.remove('show');sb?.classList.remove('show');sm?.style.setProperty('display','none','important');sb?.style.setProperty('display','none','important');const m=$('authModal');if(m){m.classList.add('show');m.style.display='flex';m.style.pointerEvents='auto';m.setAttribute('aria-hidden','false')}chooseRole('CUSTOMER');gateSetStatus('Create your account with Name, mobile number, Gmail OTP and password.',true)}catch(err){console.error('Create Account error',err);const s=$('loginGateStatus');if(s)s.textContent='Please try again. App error: '+(err?.message||'unknown')}};
 async function syncCurrentUserToSupabase(){
  const u=currentUser();if(!u||!supabaseReady||!supabase)return;
