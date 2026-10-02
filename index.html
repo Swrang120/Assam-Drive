@@ -458,7 +458,7 @@ async function setAccountPassword(role,mode,ei,en='',ep=''){
 function openForgotPassword(){
   if(state.session){toast('You are already logged in');return}
   closeSide();openModal('authModal');
-  $('authForm').innerHTML='<div class="stack"><div class="notice"><b>🔑 Forgot Password</b><br>Enter the Gmail/email used for your Assam Drive account. We will send a secure reset link.</div><div class="field"><label>Gmail / Email address</label><input id="recoveryEmail" type="email" autocomplete="email" placeholder="you@gmail.com"></div><button class="primary" type="button" onclick="sendPasswordReset()">Send Reset Link</button><button class="ghost" type="button" onclick="openRoleChooser('LOGIN')">← Back to Sign In</button></div>';
+  $('authForm').innerHTML='<div class="stack"><div class="notice"><b>🔑 Forgot Password</b><br>Enter the Gmail/email used for your Assam Drive account. We will send a secure reset link.</div><div class="field"><label>Gmail / Email address</label><input id="recoveryEmail" type="email" autocomplete="email" placeholder="you@gmail.com"></div><button class="primary" type="button" onclick="sendPasswordReset()">Send Reset Link</button><button class="ghost" type="button" onclick="openRoleChooser(\'LOGIN\')">← Back to Sign In</button></div>';
 }
 async function sendPasswordReset(){
   if(!supabaseReady||!supabase){toast('Login service is unavailable.');return}
