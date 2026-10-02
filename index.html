@@ -1,7 +1,6 @@
 <!doctype html>
 <html lang="en">
 <head>
-<link rel="stylesheet" href="./auth/auth-ui.css">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#087a52">
@@ -113,9 +112,9 @@ body.login-screen .login-gate{position:relative;z-index:1;min-height:100dvh;back
   <div class="login-subtitle">Safe, simple rides across Assam.</div>
   <div class="small" style="color:#71857b;margin-bottom:12px">New user? Create Account • Existing user? Login • Forgot password? Get OTP</div>
   <div class="login-actions premium-actions">
-    <button type="button" class="primary login-main-btn" id="loginStartBtn" onclick="AssamDriveAuth.open('LOGIN')">🔐 Login <span class="small" style="opacity:.8">• Existing User</span></button>
-    <button type="button" class="create-account-btn login-main-btn" id="createAccountBtn" onclick="AssamDriveCreateAccount.open()">✨ Create Account <span class="small" style="opacity:.75">• New User</span></button>
-    <button type="button" class="login-link-btn" id="forgotPasswordBtn" onclick="AssamDriveRecovery.open()">Forgot Password? <span class="small">• Get OTP</span></button>
+    <button type="button" class="primary login-main-btn" id="loginStartBtn" onclick="window.assamDriveAuth('LOGIN')">🔐 Login <span class="small" style="opacity:.8">• Existing User</span></button>
+    <button type="button" class="create-account-btn login-main-btn" id="createAccountBtn" onclick="window.assamDriveAuth('SIGNUP')">✨ Create Account <span class="small" style="opacity:.75">• New User</span></button>
+    <button type="button" class="login-link-btn" id="forgotPasswordBtn" onclick="window.assamDriveForgotPassword()">Forgot Password? <span class="small">• Get OTP</span></button>
   </div>
   <div class="login-note"><span>●</span> Customer & Driver accounts are separate</div>
   <div class="login-terms">By continuing, you agree to Assam Drive's<br><u>Terms of Service</u> and <u>Privacy Policy</u></div>
@@ -216,11 +215,741 @@ body.login-screen .login-gate{position:relative;z-index:1;min-height:100dvh;back
 <div class="toast" id="toast"></div><div class="click-debug" id="clickDebug">Assam Drive ready</div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="./auth/auth-session.js"></script>
-<script src="./auth/login.js"></script>
-<script src="./auth/create-account.js"></script>
-<script src="./auth/forgot-password.js"></script>
 <script>
+/* Assam Drive auth click bridge — keeps mobile auth buttons callable even if inline handlers are restricted. */
+window.assamDriveAuth=function(intent){
+  try{
+    const m=document.getElementById('authModal');
+    if(m){m.classList.add('show');m.style.display='flex';m.style.pointerEvents='auto';m.setAttribute('aria-hidden','false');}
+    if(typeof window.openRoleChooser==='function') return window.openRoleChooser(intent||'LOGIN');
+    if(typeof openRoleChooser==='function') return openRoleChooser(intent||'LOGIN');
+    const s=document.getElementById('loginGateStatus');
+    if(s)s.textContent='Login module is still starting. Please tap again.';
+  }catch(e){
+    console.error('Auth button error:',e);
+    const s=document.getElementById('loginGateStatus');
+    if(s)s.textContent='Please try again. '+(e?.message||'Authentication module error');
+  }
+};
+window.assamDriveForgotPassword=function(){
+  try{
+    if(typeof window.openForgotPassword==='function') return window.openForgotPassword();
+    if(typeof openForgotPassword==='function') return openForgotPassword();
+  }catch(e){
+    console.error('Forgot password error:',e);
+  }
+};
+function rideCustomer(r){
+ let h='<div class="stack"><span class="pill '+(r.status==='RIDE_STARTED'?'ok':r.status==='COMPLETED'?'ok':'warn')+'">'+esc(r.status)+'</span><b>'+esc(r.vehicle)+' • '+esc(r.driverName||'Assigned driver')+'</b>';
+ if(r.driverId||r.driverPhone)h+='<div class="success"><b>Driver phone: '+esc(r.driverPhone||'Available in active ride')+'</b></div>';
+ h+='<span class="muted">'+esc(r.pickup)+' → '+esc(r.destination)+'</span>';
+ if(r.status==='OTP_PENDING')h+='<div class="notice">Ride OTP: <b style="font-size:22px;letter-spacing:4px">'+esc(r.otp||'Check notification')+'</b><br><span class="small">Give this OTP to the driver only after reaching the pickup point.</span></div>';
+ if(r.status==='RIDE_STARTED')h+='<div class="notice">Live driver location is updating during this ride.</div><button class="danger" onclick="sos()">SOS</button><button class="primary" onclick="completeRide('+r.id+')">Complete ride</button>';
+ if(r.status==='COMPLETED'&&r.paymentStatus!=='PAID')h+='<div class="notice">Payment pending</div><div class="row"><button class="secondary" onclick="payRide('+r.id+',\'CASH\')">Cash</button><button class="primary" onclick="payRide('+r.id+',\'UPI\')">UPI</button></div>';
+ return h+'</div>'
+}
+function rideRequest(r){return '<div class="ride"><div class="ride-title"><b>New ride #'+r.id+'</b><span class="pill warn">'+r.vehicle+'</span></div><div>'+esc(r.pickup)+' → '+esc(r.destination)+'</div><div class="small muted">Estimated ₹'+r.fare+' • '+r.distance+' km</div><div class="row" style="margin-top:9px"><button class="primary" onclick="acceptRide('+r.id+')">Accept</button><button class="danger" onclick="rejectRide('+r.id+')">Reject</button></div></div>'}
+function rideDriver(r){return '<div class="ride"><b>Ride #'+r.id+'</b><div class="small">'+esc(r.pickup)+' → '+esc(r.destination)+'</div><div style="margin-top:8px"><b>OTP verification</b><div class="row"><input id="otpInput" maxlength="4" inputmode="numeric" placeholder="4-digit OTP" style="padding:10px;border:1px solid var(--line);border-radius:10px;width:150px"><button class="primary" onclick="verifyOtp('+r.id+')">Verify</button></div><div class="small muted">Maximum 2 attempts. Second wrong attempt cancels the ride.</div></div></div>'}
+async function book(){
+ if(!state.session||state.session.role!=='CUSTOMER'){openModal('authModal');chooseRole('CUSTOMER');toast('Login/register as Customer first');return}
+ if(activeRide()){toast('Finish the current ride first');return}
+ try{
+  await calculateGoogleRoute();
+  const p=coordsFromInput('pickup'),d=coordsFromInput('destination');
+  if(!p||!d)throw new Error('Select pickup and destination on the map');
+  const v=vehicle(),km=Math.max(.1,+$('distance').value||0),mins=Math.max(1,+$('minutes').value||1);
+  const r=await dbRpc('create_ride',{p_vehicle:v,p_pickup:$('pickup').value.trim(),p_destination:$('destination').value.trim(),p_pickup_lat:p.lat,p_pickup_lng:p.lng,p_destination_lat:d.lat,p_destination_lng:d.lng,p_distance_km:km,p_duration_minutes:mins});
+  await refreshBackend();
+  toast(r?.driver_id?'Ride assigned to a verified nearby driver':'Ride request created; waiting for a nearby driver');
+ }catch(e){console.error(e);toast(e.message||'Could not create ride')}
+}
+async function acceptRide(id){try{await dbRpc('claim_ride',{p_ride_id:id});await refreshBackend();toast('Ride accepted. Customer OTP is now available to the customer.')}catch(e){toast(e.message||'Ride is no longer available')}}
+async function rejectRide(id){try{await dbRpc('cancel_ride',{p_ride_id:id,p_reason:'Driver rejected'});await refreshBackend();toast('Ride rejected')}catch(e){toast(e.message||'Could not reject ride')}}
+async function verifyOtp(id){const val=($('otpInput').value||'').replace(/\D/g,'');if(!/^\d{4}$/.test(val)){toast('Enter the 4-digit OTP');return}try{const r=await dbRpc('verify_ride_otp',{p_ride_id:id,p_otp:val});await refreshBackend();if(r?.status==='CANCELLED')toast('Ride cancelled after 2 wrong OTP attempts');else if(r?.status==='RIDE_STARTED')toast('OTP verified — ride started');}catch(e){toast(e.message||'OTP verification failed')}}
+async function completeRide(id){try{await dbRpc('complete_ride',{p_ride_id:id});await refreshBackend();toast('Ride completed. Select payment method.')}catch(e){toast(e.message||'Could not complete ride')}}
+async function payRide(id,method){try{const status=method==='CASH'?'PAID':'PROCESSING';await dbRpc('record_payment',{p_ride_id:id,p_method:method,p_status:status});await refreshBackend();toast(method==='CASH'?'Cash payment recorded':'UPI/online payment is pending provider confirmation')}catch(e){toast(e.message||'Payment failed')}}
+async function sos(){const r=activeRide();if(!r){toast('No active ride');return}const p=coordsFromInput('pickup');try{await dbRpc('create_sos',{p_ride_id:r.id,p_lat:p?.lat||null,p_lng:p?.lng||null,p_message:'SOS requested from active ride'});toast('SOS recorded and sent to safety system')}catch(e){toast(e.message||'SOS could not be sent')}}
+
+const SUPABASE_URL='https://fvigmtojeywwyhfgyeww.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY='sb_publishable_DV1qmRyMo7kjtJxQ2JW_HA_rF9ACkuf';
+let supabase=null;
+let supabaseReady=false;
+try{
+  if(window.supabase?.createClient){supabase=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);supabaseReady=true;}
+}catch(e){console.warn('Supabase init failed',e)}
+const KEY='assam-drive-v2';
+const defaults={session:null,customers:[],drivers:[{id:'DRV-DEMO',name:'Demo Driver',phone:'+91 9000000000',vehicle:'BIKE',registration:'AS-01-AB-1234',verified:true,verification:'APPROVED',online:false,earn:0,photo:'',documents:[],checks:[]}],rides:[],fare:{BIKE:{base:20,km:10,min:1},AUTO:{base:30,km:14,min:1},CAR:{base:50,km:18,min:2}},seq:1001};
+let state;
+try{state=JSON.parse(localStorage.getItem(KEY)||'null')}catch(e){state=null;console.warn('Resetting invalid local app data',e)}
+if(!state||typeof state!=='object')state=JSON.parse(JSON.stringify(defaults));
+state.admin=state.admin&&typeof state.admin==='object'?state.admin:{profiles:[],drivers:[],documents:[],rides:[],fares:[]};
+state.customers=Array.isArray(state.customers)?state.customers:[];
+state.drivers=Array.isArray(state.drivers)?state.drivers:[];
+state.rides=Array.isArray(state.rides)?state.rides:[];
+state.fare=state.fare&&typeof state.fare==='object'?state.fare:JSON.parse(JSON.stringify(defaults.fare));
+for(const v of ['BIKE','AUTO','CAR']){if(!state.fare[v]||typeof state.fare[v]!=='object')state.fare[v]=JSON.parse(JSON.stringify(defaults.fare[v]));if(!Number.isFinite(+state.fare[v].km))state.fare[v].km=defaults.fare[v].km}
+if(!Number.isFinite(+state.seq))state.seq=1001;
+if(!state.drivers.length)state.drivers.push(JSON.parse(JSON.stringify(defaults.drivers[0])));
+state.drivers.forEach(d=>{d.documents=Array.isArray(d.documents)?d.documents:[];d.checks=Array.isArray(d.checks)?d.checks:[];d.earn=Number.isFinite(+d.earn)?+d.earn:0;d.verification=d.verification||'PENDING';d.online=!!d.online;d.vehicle=d.vehicle||'BIKE';d.registration=d.registration||'';d.phone=d.phone||'';d.name=d.name||'Driver'});
+const $=id=>document.getElementById(id);
+let assamAppReady=false;
+let splashSlowTimer=null;
+function hideSplash(){assamAppReady=true;if(splashSlowTimer)clearTimeout(splashSlowTimer);const s=$('assamSplash');if(s){s.classList.add('hide');s.setAttribute('aria-hidden','true');s.style.display='none'}}
+function showSplashSlow(message){const s=$('assamSplash');if(!s)return;const st=$('splashStatus');if(st)st.textContent=message||'Network is slow. Please check your connection.';$('splashRetry')?.removeAttribute('hidden')}
+function startSplashWatch(){splashSlowTimer=setTimeout(()=>{if(!assamAppReady)showSplashSlow('Network is slow. Please check your connection.')},7000)}
+function applyAuthShell(){
+  const logged=!!state.session;
+  const role=state.session?.role||'';
+  document.body.classList.toggle('login-screen',!logged);
+  document.body.classList.toggle('authenticated',logged);
+  const header=document.querySelector('header'), menu=$('menuBtn'), side=$('sidemenu'), back=$('sideback');
+  if(header) header.hidden=!logged;
+  if(menu) menu.hidden=!logged;
+  if(side) side.hidden=!logged;
+  if(back) back.hidden=!logged;
+  if(!logged){
+    closeSide();
+    if(menu) menu.style.removeProperty('display');
+    if(side) side.style.removeProperty('display');
+    if(back) back.style.removeProperty('display');
+  }
+  document.querySelectorAll('.navbtn[data-view]').forEach(btn=>{
+    const allowed=logged && (btn.dataset.view===role.toLowerCase() || (role==='ADMIN'||role==='SUPER_ADMIN')&&btn.dataset.view==='admin');
+    btn.hidden=!allowed;
+    btn.classList.toggle('active',allowed);
+  });
+  document.querySelectorAll('[data-side]').forEach(btn=>{
+    btn.hidden=!logged || btn.dataset.side!==role.toLowerCase();
+  });
+  const authBtn=$('authBtn'),logoutBtn=$('logoutBtn');
+  if(authBtn) authBtn.hidden=logged;
+  if(logoutBtn) logoutBtn.hidden=!logged;
+}
+applyAuthShell();
+window.__openCreateAccount=function(e){if(e){e.preventDefault();e.stopPropagation()}try{const sm=$('sidemenu'),sb=$('sideback');sm?.classList.remove('show');sb?.classList.remove('show');sm?.style.setProperty('display','none','important');sb?.style.setProperty('display','none','important');const m=$('authModal');if(m){m.classList.add('show');m.style.display='flex';m.style.pointerEvents='auto';m.setAttribute('aria-hidden','false')}chooseRole('CUSTOMER');gateSetStatus('Create your account with Name, mobile number, Gmail OTP and password.',true)}catch(err){console.error('Create Account error',err);const s=$('loginGateStatus');if(s)s.textContent='Please try again. App error: '+(err?.message||'unknown')}};
+async function syncCurrentUserToSupabase(){
+ const u=currentUser();if(!u||!supabaseReady||!supabase)return;
+ try{
+  const a=await supabase.auth.updateUser({data:{name:u.name||'',avatar_url:u.photo||'',role:state.session.role}});
+  if(a.error)console.warn('Auth profile sync:',a.error.message);
+  const q=await supabase.from('profiles').upsert({id:u.id,role:state.session.role,full_name:u.name||'',phone:u.phone||'',avatar_url:u.photo||null,updated_at:new Date().toISOString()},{onConflict:'id'});
+  if(q.error)console.warn('Supabase profile sync:',q.error.message);
+ }catch(e){console.warn('Supabase sync failed',e)}
+}
+const save=()=>{
+ try{localStorage.setItem(KEY,JSON.stringify(state))}
+ catch(e){console.warn('Local save failed',e);toast('Local storage is full. Please use a smaller profile photo.')}
+ try{render()}catch(e){console.error('Render failed',e);const d=$('clickDebug');if(d){d.textContent='App error: '+(e?.message||'Render failed');d.style.display='block';d.style.background='#a61e1e'}}
+ syncCurrentUserToSupabase();
+};
+function toast(x){const t=$('toast');t.textContent=x;t.style.display='block';clearTimeout(window.__toast);window.__toast=setTimeout(()=>t.style.display='none',2300)}
+function openModal(id){const el=$(id);if(!el)return;closeSide();el.classList.add('show');el.style.display='flex';el.style.pointerEvents='auto';el.setAttribute('aria-hidden','false');}
+function closeModal(id){const el=$(id);if(!el)return;el.classList.remove('show');el.style.display='none';el.style.pointerEvents='none';el.setAttribute('aria-hidden','true');}
+
+function openSide(){ if(!state.session)return; $('sidemenu')?.removeAttribute('hidden'); $('sideback')?.removeAttribute('hidden'); $('sidemenu')?.classList.add('show'); $('sideback')?.classList.add('show') }
+function closeSide(){ $('sidemenu')?.classList.remove('show'); $('sideback')?.classList.remove('show'); $('sidemenu')?.setAttribute('hidden',''); $('sideback')?.setAttribute('hidden','') }
+function showInfo(title,body){$('authForm').innerHTML='<div class="stack"><h3>'+esc(title)+'</h3><div class="notice">'+body+'</div><button class="secondary" onclick="closeModal(\'authModal\')">Close</button></div>';openModal('authModal')}
+function currentUser(){if(!state.session)return null;return state.session.role==='CUSTOMER'?state.customers.find(x=>x.id===state.session.id):state.drivers.find(x=>x.id===state.session.id)}
+function vehicle(){const el=document.querySelector('input[name=vehicle]:checked');return el?el.value:'BIKE'}
+function activeRide(){return state.rides.find(r=>['SEARCHING','DRIVER_ASSIGNED','OTP_PENDING','RIDE_STARTED'].includes(r.status))}
+function estimate(){const v=vehicle(),km=Math.max(.1,+$('distance').value||0),mins=Math.max(1,+$('minutes').value||1),f=state.fare[v];return Math.max(f.base+km*f.km,v==='BIKE'?40:v==='AUTO'?60:100)}
+function renderFare(){$('fare').textContent='₹'+Math.round(estimate());$('routeText').textContent='Estimated distance: '+(+($('distance').value||0)).toFixed(1)+' km • '+(+($('minutes').value||0))+' min';$('bikeRateLabel').textContent='₹'+state.fare.BIKE.km+'/km';$('autoRateLabel').textContent='₹'+state.fare.AUTO.km+'/km';$('carRateLabel').textContent='₹'+state.fare.CAR.km+'/km'}
+function render(){
+ renderFare();
+ const logged=!!state.session;
+ applyAuthShell();
+ $('loginGate').classList.toggle('active',!logged);
+ $('customer').classList.toggle('active',logged&&state.session.role==='CUSTOMER');
+ $('driver').classList.toggle('active',logged&&state.session.role==='DRIVER');
+ $('admin').classList.toggle('active',logged&&(state.session.role==='ADMIN'||state.session.role==='SUPER_ADMIN'));
+ const u=currentUser(), ar=activeRide();
+ $('authBtn').style.display=u?'none':'block';$('logoutBtn').style.display=u?'block':'none';
+ $('customerLoginNotice').style.display=state.session&&state.session.role==='CUSTOMER'?'none':'block';
+ $('customerProfile').innerHTML=u&&state.session.role==='CUSTOMER'?'<div class="row"><img class="avatar" src="'+(u.photo||'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2262%22 height=%2262%22%3E%3Crect width=%2262%22 height=%2262%22 fill=%22%23e9f1ed%22/%3E%3Ctext x=%2231%22 y=%2238%22 text-anchor=%22middle%22 font-size=%2226%22%3E👤%3C/text%3E%3C/svg%3E')+'"><div><b>'+esc(u.name)+'</b><div class="small muted">'+esc(u.phone)+'</div></div></div><button class="secondary" onclick="editProfile()">Edit profile</button>':'<div class="muted">Not logged in.</div>';
+ $('currentRide').innerHTML=ar&&state.session&&state.session.role==='CUSTOMER'?rideCustomer(ar):'<div class="muted">No active ride.</div>';
+ $('history').innerHTML=state.rides.filter(r=>!['SEARCHING','DRIVER_ASSIGNED','OTP_PENDING','RIDE_STARTED'].includes(r.status)).slice().reverse().map(r=>'<div class="ride"><div class="ride-title"><b>'+r.vehicle+' • '+esc(r.pickup)+' → '+esc(r.destination)+'</b><span class="pill '+(r.status==='COMPLETED'?'ok':'bad')+'">'+r.status+'</span></div><div class="small muted">₹'+r.fare+' • '+new Date(r.created).toLocaleString()+'</div></div>').join('')||'<div class="muted">No rides yet.</div>';
+ const d=state.drivers[0];$('driverStatus').textContent=d.online?'Online':'Offline';$('onlineBtn').textContent=d.online?'Go offline':'Go online';$('driverEarn').textContent='₹'+d.earn;$('driverVerify').textContent=d.verification||'PENDING';
+ $('driverProfile').innerHTML=state.session&&state.session.role==='DRIVER'?'<div class="row"><img class="avatar" src="'+(d.photo||'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2262%22 height=%2262%22%3E%3Crect width=%2262%22 height=%2262%22 fill=%22%23e9f1ed%22/%3E%3Ctext x=%2231%22 y=%2238%22 text-anchor=%22middle%22 font-size=%2226%22%3E🚗%3C/text%3E%3C/svg%3E')+'"><div><b>'+esc(d.name)+'</b><div class="small muted">'+esc(d.phone)+'</div><div class="small">'+d.vehicle+' • '+esc(d.registration)+'</div></div></div><button class="secondary" type="button" onclick="editProfile()">Edit profile</button>':'<div class="muted">Login/register as Driver.</div>';
+ const req=state.rides.find(r=>r.status==='SEARCHING');$('driverRequest').innerHTML=state.session&&state.session.role==='DRIVER'&&req&&d.online?rideRequest(req):'<div class="muted">'+(state.session&&state.session.role==='DRIVER'?(d.online?'Waiting for ride requests…':'Go online to receive requests.'):'Login/register as Driver to continue.')+'</div>';
+ const dr=state.rides.find(r=>r.driverId===d.id&&['DRIVER_ASSIGNED','OTP_PENDING','RIDE_STARTED'].includes(r.status));$('driverRide').innerHTML=dr?rideDriver(dr):'';
+ $('driverCard').innerHTML=d.verification==='APPROVED'?'<div class="idcard"><div class="row between"><b>ASSAM DRIVE • DRIVER ID</b><span class="pill ok">VERIFIED</span></div><div class="row" style="margin-top:12px"><img class="avatar" src="'+(d.photo||'')+'"><div><h3>'+esc(d.name)+'</h3><div>'+d.vehicle+' • '+esc(d.registration)+'</div><div class="idnum">'+d.id+'</div></div></div><div class="small muted" style="margin-top:10px">Generated automatically after admin approval. Carrying this card does not replace official licence/vehicle documents.</div></div>':'<div class="muted">ID card will be generated automatically after approval.</div>';
+ $('verificationQueue').innerHTML=state.drivers.map(d=>'<div class="ride"><div class="ride-title"><b>'+esc(d.name)+' • '+d.vehicle+' • '+esc(d.registration)+'</b><span class="pill '+(d.verification==='APPROVED'?'ok':d.verification==='REJECTED'?'bad':'warn')+'">'+d.verification+'</span></div><div class="small muted">'+d.documents.length+' documents • AI pre-check: '+(d.checks.length?d.checks.join(', '):'not run')+'</div><div class="row" style="margin-top:8px">'+(d.verification==='APPROVED'?'':'<button class="primary" onclick="approveDriver(\''+d.id+'\')">Approve</button><button class="danger" onclick="rejectDriver(\''+d.id+'\')">Reject</button>')+'</div></div>').join('');
+ $('adminCustomers').textContent=state.customers.length;$('adminDrivers').textContent=state.drivers.length;$('adminOnline').textContent=state.drivers.filter(x=>x.online&&x.verification==='APPROVED').length;$('adminDone').textContent=state.rides.filter(x=>x.status==='COMPLETED').length;
+ $('adminRides').innerHTML=state.rides.slice().reverse().map(r=>'<div class="ride"><div class="ride-title"><b>#'+r.id+' '+r.vehicle+'</b><span class="pill">'+r.status+'</span></div><div class="small">'+esc(r.pickup)+' → '+esc(r.destination)+' • ₹'+r.fare+(r.driverName?' • Driver: '+esc(r.driverName):'')+'</div></div>').join('')||'<div class="muted">No rides.</div>';
+ if(logged&&(state.session.role==='ADMIN'||state.session.role==='SUPER_ADMIN')){const a=state.admin||{};$('adminCustomers').textContent=(a.profiles||[]).filter(x=>x.role==='CUSTOMER').length;$('adminDrivers').textContent=(a.drivers||[]).length;$('adminOnline').textContent=(a.drivers||[]).filter(x=>x.online).length;$('adminDone').textContent=(a.rides||[]).filter(x=>x.status==='COMPLETED').length;$('verificationQueue').innerHTML=(a.drivers||[]).map(d=>{const docs=(a.documents||[]).filter(x=>x.driver_id===d.id);return '<div class="ride"><b>'+esc(d.driver_id||d.id)+'</b><div>'+esc(d.vehicle_type)+' • '+esc(d.registration_number)+'</div><span class="pill '+(d.verification_status==='APPROVED'?'ok':d.verification_status==='REJECTED'?'bad':'warn')+'">'+esc(d.verification_status)+'</span><div class="small muted">'+docs.length+' documents • '+docs.filter(x=>x.admin_status==='APPROVED').length+' approved</div>'+docs.map(x=>'<div class="row" style="margin-top:5px"><span class="small">'+esc(x.document_type)+' • '+esc(x.admin_status)+'</span><button class="secondary" onclick="adminReviewDocument('+x.id+',\'APPROVED\')">Approve</button><button class="danger" onclick="adminReviewDocument('+x.id+',\'REJECTED\')">Reject</button></div>').join('')+'</div>'}).join('')||'<div class="muted">No drivers.</div>';$('adminRides').innerHTML=(a.rides||[]).map(r=>'<div class="ride"><b>#'+r.id+' '+esc(r.vehicle_type)+'</b><div>'+esc(r.pickup_text)+' → '+esc(r.destination_text)+'</div><span class="pill">'+esc(r.status)+'</span></div>').join('')||'<div class="muted">No rides.</div>';}
+}
+function esc(x){return String(x??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function gateSetStatus(msg,ok=false){const el=$('loginGateStatus');if(el){el.textContent=msg;el.style.color=ok?'#9be2c0':'#ffb5b5'}}
+async function gateSendOtp(){
+ const email=($('loginGateEmail')?.value||'').trim().toLowerCase();
+ if(!/^\S+@\S+\.\S+$/.test(email)){gateSetStatus('Enter a valid email address');return}
+ if(!supabaseReady||!supabase){gateSetStatus('Login service is still loading. Please try again.');return}
+ gateSetStatus('Sending email OTP…',true);
+ const {error}=await supabase.auth.signInWithOtp({email,options:{data:{requested_role:'CUSTOMER'}}});
+ if(error){gateSetStatus(error.message);return}
+ const btn=$('loginGateOtp');btn.textContent='OTP SENT — OPEN VERIFICATION';btn.classList.add('ready');btn.onclick=()=>{openModal('authModal');verifyEmailGateForm(email)};gateSetStatus('OTP sent to your email. Enter the code in the verification screen.',true);
+}
+function verifyEmailGateForm(email){
+ $('authForm').innerHTML='<div class="stack"><div class="success">Verification code sent to '+esc(email)+'</div><div class="field"><label>Email OTP</label><input id="authEmailOtp" maxlength="6" inputmode="numeric" autocomplete="one-time-code" class="login-password" placeholder="6-digit code"></div><button class="primary" type="button" onclick="verifyEmailSignup(\'CUSTOMER\',\''+encodeURIComponent(email)+'\')">Verify & continue</button><button class="ghost" type="button" onclick="startEmailSignup(\'CUSTOMER\')">Change email</button></div>';
+}
+async function gateGoogleLogin(){
+ if(!supabaseReady||!supabase){gateSetStatus('Login service is still loading. Please try again.');return}
+ localStorage.setItem('assam_drive_pending_role','CUSTOMER');
+ gateSetStatus('Opening Google account selector…',true);
+ const {error}=await supabase.auth.signInWithOAuth({
+   provider:'google',
+   options:{redirectTo:location.href,prompt:'select_account',queryParams:{access_type:'offline'}}
+ });
+ if(error)gateSetStatus(error.message);
+}
+let selectedAccountRole='';
+let authIntent='BOTH';
+let passwordRecoveryOtpPending=false;
+let authFlowStage='IDLE';
+
+/* Separate, direct authentication flows.
+   LOGIN, CREATE ACCOUNT and FORGOT PASSWORD never share a role-selection step or state. */
+function setAuthFlow(title,subtitle){
+  $('authFlowTitle').textContent=title;
+  $('authFlowSubtitle').textContent=subtitle;
+}
+function authRoleCards(intent){
+  const action=intent==='SIGNUP'
+    ? 'Create'
+    : 'Sign In';
+  const sub=intent==='SIGNUP'
+    ? 'Choose which type of account you want to create.'
+    : 'Choose the account you already have.';
+  setAuthFlow(intent==='SIGNUP'?'Create Account':'Login',sub);
+  $('authForm').innerHTML='<div class="stack">'+
+    '<div class="notice"><b>'+esc(sub)+'</b></div>'+
+    '<button type="button" class="role-entry customer-entry" style="min-height:118px;width:100%" onclick="chooseRole(\'CUSTOMER\')"><span class="role-icon">👤</span><b>'+action+' Customer Account</b><span class="small role-desc">'+(intent==='SIGNUP'?'Book rides & manage trips':'Customer Gmail + password')+'</span></button>'+
+    '<button type="button" class="role-entry driver-entry" style="min-height:118px;width:100%" onclick="chooseRole(\'DRIVER\')"><span class="role-icon">🚗</span><b>'+action+' Driver Account</b><span class="small role-desc">'+(intent==='SIGNUP'?'Register, verify & drive':'Driver Gmail + password')+'</span></button>'+
+    (intent==='SIGNUP'
+      ? '<button type="button" class="ghost" onclick="openRoleChooser(\'LOGIN\')">Already have an account? Login</button>'
+      : '<button type="button" class="ghost" onclick="openRoleChooser(\'SIGNUP\')">New user? Create Account</button>')+
+    '<button type="button" class="login-link" onclick="openForgotPassword()">Forgot Password? Get OTP</button>'+
+  '</div>';
+}
+function selectAccountRole(role){
+  /* Kept as a compatibility alias for older cached pages. */
+  chooseRole(role);
+}
+function nextAccountRole(){
+  /* Kept as a compatibility alias for older cached pages. */
+  if(selectedAccountRole) chooseRole(selectedAccountRole);
+  else toast('Please select Customer or Driver');
+}
+function bindRoleControls(){ /* no-op: role controls are now direct buttons */ }
+
+function openRoleChooser(intent='BOTH'){
+  if(state.session){toast('You are already logged in');return}
+  closeSide();
+  authIntent=intent||'BOTH';
+  authFlowStage='LOGIN';
+  selectedAccountRole='';
+  openModal('authModal');
+  if(authIntent==='SIGNUP') authRoleCards('SIGNUP');
+  else authRoleCards('LOGIN');
+}
+function chooseRole(role){
+  if(role!=='CUSTOMER'&&role!=='DRIVER'){toast('Choose Customer or Driver');return}
+  selectedAccountRole=role;
+  if(authIntent==='SIGNUP'){
+    startAccountSignup(role);
+  }else{
+    openPasswordLogin(role,'EMAIL');
+  }
+}
+function startAccountSignup(role){
+  authFlowStage='SIGNUP';
+  setAuthFlow((role==='DRIVER'?'Driver':'Customer')+' • Create Account','Gmail verification is required before password setup.');
+  $('authForm').innerHTML='<div class="stack">'+
+    '<div class="success">New '+(role==='DRIVER'?'Driver':'Customer')+' account</div>'+
+    '<div class="field"><label>Full name</label><input id="signupName" class="login-password" type="text" autocomplete="name" placeholder="Enter your full name"></div>'+
+    '<div class="field"><label>Mobile number</label><div class="login-phone"><div class="country">+91</div><input id="signupPhone" inputmode="tel" autocomplete="tel" placeholder="10-digit mobile number"></div><div class="small muted">Your mobile number will be saved with the account.</div></div>'+
+    '<div class="field"><label>Gmail / Email address</label><input id="signupEmail" class="login-password" type="email" autocomplete="email" placeholder="you@gmail.com"></div>'+
+    '<button class="primary" type="button" onclick="sendSignupEmailOtp(\''+role+'\')">📩 Send Gmail OTP</button>'+
+    '<button class="ghost" type="button" onclick="openRoleChooser(\'SIGNUP\')">← Change account type</button>'+
+  '</div>';
+}
+async function sendSignupEmailOtp(role){
+ if(!supabaseReady||!supabase){toast('Login service is still loading.');return}
+ const name=($('signupName')?.value||'').trim();
+ const phone=normalizePhone($('signupPhone')?.value||'');
+ const email=($('signupEmail')?.value||'').trim().toLowerCase();
+ if(name.length<2){toast('Enter your full name');return}
+ if(!/^\+91\d{10}$/.test(phone)){toast('Enter a valid 10-digit Indian mobile number');return}
+ if(!/^\S+@\S+\.\S+$/.test(email)){toast('Enter a valid Gmail/email address');return}
+ setAuthFlow((role==='DRIVER'?'Driver':'Customer')+' • Verify Gmail','Enter the OTP sent to '+email+'.');
+ $('authForm').innerHTML='<div class="stack"><div class="success">OTP sent to '+esc(email)+' ✓</div><div class="field"><label>Gmail OTP</label><input id="signupEmailOtp" maxlength="6" inputmode="numeric" autocomplete="one-time-code" class="login-password" placeholder="Enter 6-digit OTP"></div><button class="primary" type="button" onclick="verifySignupEmailOtp(\''+role+'\',\''+encodeURIComponent(name)+'\',\''+encodeURIComponent(phone)+'\',\''+encodeURIComponent(email)+'\')">Verify Gmail & Continue</button><button class="ghost" type="button" onclick="startAccountSignup(\''+role+'\')">← Back</button></div>';
+ const {error}=await supabase.auth.signInWithOtp({email,options:{data:{requested_role:role,full_name:name,mobile_number:phone}}});
+ if(error){toast(error.message);startAccountSignup(role);return}
+}
+async function verifySignupEmailOtp(role,en,ep,ee){
+ const name=decodeURIComponent(en),phone=decodeURIComponent(ep),email=decodeURIComponent(ee);
+ const token=($('signupEmailOtp')?.value||'').replace(/\D/g,'');
+ if(token.length<4){toast('Enter the verification code');return}
+ const {data,error}=await supabase.auth.verifyOtp({email,token,type:'email'});
+ if(error){toast(error.message);return}
+ if(!data?.user){toast('Gmail verification did not return an account. Please try again.');return}
+ /* Do not enter the app yet. Password setup completes the signup flow. */
+ showSetPassword(role,'EMAIL',email,{name,phone});
+}
+async function startEmailSignup(role){startAccountSignup(role)}
+async function sendEmailOtp(role){startAccountSignup(role)}
+async function verifyEmailSignup(role,ee){
+ const email=decodeURIComponent(ee);
+ const token=($('authEmailOtp')?.value||'').replace(/\D/g,'');
+ if(token.length<4){toast('Enter the verification code');return}
+ const {data,error}=await supabase.auth.verifyOtp({email,token,type:'email'});
+ if(error){toast(error.message);return}
+ const name=data.user.user_metadata?.full_name||'New Customer';
+ const phone=data.user.user_metadata?.mobile_number||'';
+ await establishSupabaseUser(role,data.user,{name,phone,email});
+ showSetPassword(role,'EMAIL',email,{name,phone});
+}
+function showSetPassword(role,mode,identifier,profile={}){
+ setAuthFlow((role==='DRIVER'?'Driver':'Customer')+' • Set Password','Gmail verified successfully. Create your password.');
+ $('authForm').innerHTML='<div class="stack"><div class="success">Gmail verified successfully ✓</div><div class="field"><label>Create password</label><input id="newPassword" class="login-password" type="password" autocomplete="new-password" placeholder="At least 8 characters"></div><div class="field"><label>Confirm password</label><input id="confirmPassword" class="login-password" type="password" autocomplete="new-password" placeholder="Repeat password"></div><button class="primary" type="button" onclick="setAccountPassword(\''+role+'\',\''+mode+'\',\''+encodeURIComponent(identifier)+'\',\''+encodeURIComponent(profile.name||'')+'\',\''+encodeURIComponent(profile.phone||'')+'\')">Complete Account</button><div class="small muted">Your password is handled securely by Supabase Auth.</div></div>';
+}
+async function setAccountPassword(role,mode,ei,en='',ep=''){
+ if(!supabaseReady||!supabase){toast('Login service is unavailable.');return}
+ const p=$('newPassword')?.value||'',q=$('confirmPassword')?.value||'';
+ if(p.length<8){toast('Password must be at least 8 characters');return}
+ if(p!==q){toast('Passwords do not match');return}
+ const name=decodeURIComponent(en),phone=decodeURIComponent(ep);
+ const {error}=await supabase.auth.updateUser({password:p,data:{full_name:name,mobile_number:phone,requested_role:role}});
+ if(error){toast(error.message);return}
+ authFlowStage='IDLE';
+ await supabase.auth.signOut();
+ state.session=null;save();
+ setAuthFlow((role==='DRIVER'?'Driver':'Customer')+' • Account Ready','Your Gmail is verified and your password is set.');
+ $('authForm').innerHTML='<div class="stack"><div class="success">Account created successfully ✓</div><div class="notice">Now sign in with your Gmail and password.</div><button class="primary" type="button" onclick="openPasswordLogin(\''+role+'\',\'EMAIL\')">🔐 Login with Gmail + Password</button></div>';
+}
+function openForgotPassword(){
+  if(state.session){toast('You are already logged in');return}
+  closeSide();openModal('authModal');
+  passwordRecoveryOtpPending=false;
+  authFlowStage='RECOVERY';
+  setAuthFlow('Forgot Password','This flow is separate from Login and Create Account.');
+  $('authForm').innerHTML='<div class="stack"><div class="notice"><b>🔑 Reset your password</b><br>Enter the Gmail/email linked to your Assam Drive account. We will send a one-time OTP.</div><div class="field"><label>Gmail / Email address</label><input id="recoveryEmail" type="email" autocomplete="email" placeholder="you@gmail.com"></div><button class="primary" type="button" onclick="sendPasswordReset()">📩 Send OTP</button><button class="ghost" type="button" onclick="openRoleChooser(\'LOGIN\')">← Back to Login</button></div>';
+}
+async function sendPasswordReset(){
+  if(!supabaseReady||!supabase){toast('Login service is unavailable.');return}
+  const email=($('recoveryEmail')?.value||'').trim().toLowerCase();
+  if(!/^\S+@\S+\.\S+$/.test(email)){toast('Enter a valid Gmail/email address');return}
+  passwordRecoveryOtpPending=true;
+  authFlowStage='RECOVERY';
+  localStorage.setItem('assam_drive_password_recovery','1');
+  const {error}=await supabase.auth.signInWithOtp({email,options:{shouldCreateUser:false}});
+  if(error){passwordRecoveryOtpPending=false;localStorage.removeItem('assam_drive_password_recovery');toast(error.message);return}
+  setAuthFlow('Forgot Password • Verify OTP','Enter the OTP sent to '+email+'.');
+  $('authForm').innerHTML='<div class="stack"><div class="success">OTP sent ✓</div><div class="field"><label>Gmail OTP</label><input id="recoveryOtp" maxlength="6" inputmode="numeric" autocomplete="one-time-code" class="login-password" placeholder="6-digit OTP"></div><button class="primary" type="button" onclick="verifyPasswordResetOtp()">Verify OTP</button><button class="ghost" type="button" onclick="openForgotPassword()">Change email</button></div>';
+}
+async function verifyPasswordResetOtp(){
+  if(!supabaseReady||!supabase){toast('Login service is unavailable.');return}
+  const email=($('recoveryEmail')?.value||'').trim().toLowerCase();
+  const token=($('recoveryOtp')?.value||'').replace(/\D/g,'');
+  if(!/^\S+@\S+\.\S+$/.test(email)){toast('Enter a valid Gmail/email address');return}
+  if(token.length<4){toast('Enter the OTP from Gmail');return}
+  passwordRecoveryOtpPending=true;localStorage.setItem('assam_drive_password_recovery','1');
+  const {data,error}=await supabase.auth.verifyOtp({email,token,type:'email'});
+  if(error){toast(error.message);return}
+  if(!data?.session){toast('OTP verified, but a secure session was not created. Please try again.');return}
+  showPasswordRecovery();
+}
+function showPasswordRecovery(){
+  openModal('authModal');setAuthFlow('Forgot Password • New Password','OTP verified. Choose a new password.');
+  $('authForm').innerHTML='<div class="stack"><div class="notice"><b>Set a new password</b></div><div class="field"><label>New password</label><input id="recoveryNewPassword" type="password" autocomplete="new-password" placeholder="At least 8 characters"></div><div class="field"><label>Confirm password</label><input id="recoveryConfirmPassword" type="password" autocomplete="new-password" placeholder="Repeat password"></div><button class="primary" type="button" onclick="finishPasswordRecovery()">Update Password</button></div>';
+}
+async function finishPasswordRecovery(){
+  if(!supabaseReady||!supabase){toast('Login service is unavailable.');return}
+  const p=$('recoveryNewPassword')?.value||'',q=$('recoveryConfirmPassword')?.value||'';
+  if(p.length<8){toast('Password must be at least 8 characters');return}
+  if(p!==q){toast('Passwords do not match');return}
+  const {error}=await supabase.auth.updateUser({password:p});
+  if(error){toast(error.message);return}
+  passwordRecoveryOtpPending=false;authFlowStage='IDLE';localStorage.removeItem('assam_drive_password_recovery');
+  await supabase.auth.signOut();state.session=null;render();
+  setAuthFlow('Password Updated','Your password has been changed successfully.');
+  $('authForm').innerHTML='<div class="stack"><div class="success">Password updated successfully ✓</div><div class="notice">Sign in with your Gmail and new password.</div><button class="primary" type="button" onclick="openRoleChooser(\'LOGIN\')">🔐 Back to Login</button></div>';
+}
+function passwordLoginForm(role,mode){
+ setAuthFlow((role==='DRIVER'?'Driver':'Customer')+' • Login','Use your existing Gmail and password.');
+ const input=mode==='EMAIL'
+  ? '<input id="authLoginEmail" class="login-password" type="email" autocomplete="email" placeholder="you@example.com">'
+  : '<div class="login-phone"><div class="country">+91</div><input id="authLoginPhone" inputmode="tel" autocomplete="tel" placeholder="10-digit mobile number"></div>';
+ return '<div class="stack"><div class="notice small">Existing '+(role==='DRIVER'?'Driver':'Customer')+' account.</div>'+input+'<input id="authLoginPassword" class="login-password" type="password" autocomplete="current-password" placeholder="Password"><button class="primary" type="button" onclick="loginWithPassword(\''+role+'\',\''+mode+'\')">🔐 Sign In</button><button class="login-link" type="button" onclick="openForgotPassword()">Forgot Password? Get OTP</button><button class="ghost" type="button" onclick="openRoleChooser(\'LOGIN\')">← Change account type</button></div>';
+}
+function openPasswordLogin(role,mode='EMAIL'){
+ authFlowStage='LOGIN';
+ authIntent='LOGIN';
+ selectedAccountRole=role;
+ openModal('authModal');$('authForm').innerHTML=passwordLoginForm(role,mode);
+}
+function normalizePhone(raw){
+ const digits=(raw||'').replace(/\D/g,'');
+ return digits.length===10?'+91'+digits:(raw||'').replace(/[\s()-]/g,'');
+}
+async function loginWithPassword(role,mode){
+ if(!supabaseReady||!supabase){toast('Login service is still loading.');return}
+ let identifier='',password=$('authLoginPassword')?.value||'';
+ if(mode==='EMAIL')identifier=($('authLoginEmail')?.value||'').trim().toLowerCase();else identifier=normalizePhone($('authLoginPhone')?.value||'');
+ if(mode==='EMAIL'&&!/^\S+@\S+\.\S+$/.test(identifier)){toast('Enter a valid Gmail/email address');return}
+ if(mode==='PHONE'&&!/^\+91\d{10}$/.test(identifier)){toast('Enter a 10-digit Indian mobile number');return}
+ if(password.length<8){toast('Enter your password (minimum 8 characters)');return}
+ const payload=mode==='EMAIL'?{email:identifier,password}:{phone:identifier,password};
+ const {data,error}=await supabase.auth.signInWithPassword(payload);
+ if(error){toast(error.message);return}
+ await establishSupabaseUser(role,data.user);closeModal('authModal');save();toast(role==='CUSTOMER'?'Customer login successful':'Driver login successful');
+}
+async function sendOtp(role){
+ if(!supabaseReady||!supabase){toast('Login service is still loading.');return}
+ const p=normalizePhone($('authPhone')?.value||'');
+ if(!/^\+91\d{10}$/.test(p)){toast('Enter a 10-digit Indian mobile number');return}
+ $('authForm').innerHTML='<div class="success">Sending OTP to '+esc(p)+'…</div>';
+ const {error}=await supabase.auth.signInWithOtp({phone:p,options:{data:{requested_role:role}}});
+ if(error){$('authForm').innerHTML='<div class="notice">'+esc(error.message)+'</div><button class="secondary" type="button" onclick="startOtpSignup(\''+role+'\')">Try again</button>';return}
+ $('authForm').innerHTML='<div class="stack"><div class="success">OTP sent to '+esc(p)+'</div><div class="field"><label>6-digit OTP</label><input id="authOtp" maxlength="6" inputmode="numeric" autocomplete="one-time-code" class="login-password" placeholder="Enter OTP"></div><button class="primary" type="button" onclick="verifyAuth(\''+role+'\',\''+encodeURIComponent(p)+'\')">Verify OTP</button><button class="ghost" type="button" onclick="startOtpSignup(\''+role+'\')">Change number</button></div>';
+}
+async function verifyAuth(role,ep){
+ if(!supabaseReady||!supabase){toast('Login service is unavailable right now.');return}
+ const p=decodeURIComponent(ep),otp=($('authOtp')?.value||'').replace(/\D/g,'');
+ if(otp.length!==6){toast('Enter the 6-digit OTP');return}
+ const {data,error}=await supabase.auth.verifyOtp({phone:p,token:otp,type:'sms'});
+ if(error){toast(error.message);return}
+ await establishSupabaseUser(role,data.user);
+ showSetPassword(role,'PHONE',p);
+}
+async function establishSupabaseUser(role,user,profile={}){
+ if(!user)return;
+ const phone=profile.phone||user.user_metadata?.mobile_number||user.phone||'';
+ const name=profile.name||user.user_metadata?.full_name||user.user_metadata?.name||(role==='CUSTOMER'?'New Customer':'New Driver');
+ if(role==='ADMIN'||role==='SUPER_ADMIN'){state.session={role,id:user.id};await refreshAdminDashboard();render();return}
+ if(supabaseReady&&supabase){
+   const q=await supabase.rpc('ensure_my_profile',{p_role:role,p_name:name,p_phone:phone});
+   if(q.error)console.warn('Profile backend sync:',q.error.message);
+   const row=q.data||{};
+   if(role==='CUSTOMER'){
+     const p=row; let u=state.customers.find(x=>x.id===user.id)||{};
+     Object.assign(u,{id:user.id,name:p.full_name||name,phone:p.phone||phone,photo:p.avatar_url||''});
+     if(!state.customers.includes(u))state.customers.push(u);
+     state.session={role:'CUSTOMER',id:user.id};
+   }else{
+     const p=row, drow=p.driver||{};
+     let d=state.drivers.find(x=>x.id===user.id)||{};
+     Object.assign(d,{id:user.id,name:p.full_name||name,phone:p.phone||phone,photo:p.avatar_url||'',vehicle:drow.vehicle_type||d.vehicle||'BIKE',registration:drow.registration_number||d.registration||'',verified:!!drow.verified,verification:drow.verification_status||d.verification||'PENDING',online:!!drow.online,earn:Number(d.earn||0),documents:Array.isArray(d.documents)?d.documents:[],checks:Array.isArray(d.checks)?d.checks:[]});
+     if(!state.drivers.includes(d))state.drivers.push(d);
+     state.session={role:'DRIVER',id:user.id};
+   }
+   await refreshBackend();
+ }else{
+   if(role==='CUSTOMER'){let u=state.customers.find(x=>x.id===user.id)||{id:user.id,name,phone,photo:''};u.name=name||u.name;u.phone=phone||u.phone;state.session={role:'CUSTOMER',id:user.id};if(!state.customers.includes(u))state.customers.push(u)}
+   else{let d=state.drivers.find(x=>x.id===user.id)||{id:user.id,name,phone,vehicle:'BIKE',registration:'',verified:false,verification:'PENDING',online:false,earn:0,photo:'',documents:[],checks:[]};d.name=name||d.name;d.phone=phone||d.phone;state.session={role:'DRIVER',id:user.id};if(!state.drivers.includes(d))state.drivers.push(d)}
+ }
+ render();
+}
+async function dbRpc(fn,args={}){
+ if(!supabaseReady||!supabase||!state.session)throw new Error('Account session is not ready');
+ const {data,error}=await supabase.rpc(fn,args);
+ if(error)throw error;
+ return data;
+}
+async function refreshBackend(){
+ if(!supabaseReady||!supabase||!state.session)return;
+ if(state.session.role==='ADMIN'||state.session.role==='SUPER_ADMIN'){await refreshAdminDashboard();return;}
+ try{
+   const {data:rides,error}=await supabase.from('rides').select('*').order('created_at',{ascending:false}).limit(100);
+   if(error)throw error;
+   const mapped=(rides||[]).map(r=>({id:r.id,vehicle:r.vehicle_type,pickup:r.pickup_text,destination:r.destination_text,distance:Number(r.distance_km||0),minutes:Number(r.duration_minutes||0),fare:Number(r.fare||0),status:r.status,driverId:r.driver_id,driverName:null,driverPhone:r.driver_phone_snapshot||'',otp:null,created:new Date(r.created_at).getTime(),paymentStatus:r.payment_status,paymentMethod:r.payment_method,lat:r.pickup_lat,lng:r.pickup_lng}));
+   if(state.session.role==='CUSTOMER'){
+     const activeIds=mapped.filter(r=>r.status==='OTP_PENDING').map(r=>r.id);
+     if(activeIds.length){const q=await supabase.from('ride_otp').select('ride_id,customer_otp,expires_at').in('ride_id',activeIds);if(!q.error)(q.data||[]).forEach(o=>{const x=mapped.find(r=>r.id===o.ride_id);if(x&&new Date(o.expires_at)>new Date())x.otp=o.customer_otp})}
+   }
+   state.rides=mapped;
+   if(state.session.role==='CUSTOMER'){const active=mapped.find(r=>['DRIVER_ASSIGNED','OTP_PENDING','RIDE_STARTED'].includes(r.status));if(active){const q=await supabase.from('ride_location_updates').select('lat,lng,recorded_at').eq('ride_id',active.id).order('recorded_at',{ascending:false}).limit(1).maybeSingle();if(!q.error&&q.data){active.driverLat=q.data.lat;active.driverLng=q.data.lng;active.driverLocationAt=q.data.recorded_at}}}
+   if(state.session.role==='DRIVER'){
+     const q=await dbRpc('get_driver_ride_queue');
+     state.rides=[...mapped,...(q||[]).map(r=>({id:r.id,vehicle:r.vehicle_type,pickup:r.pickup_text,destination:r.destination_text,distance:Number(r.distance_km||0),minutes:Number(r.duration_minutes||0),fare:Number(r.fare||0),status:r.status,driverId:r.driver_id,driverName:null,driverPhone:r.driver_phone_snapshot||'',created:new Date(r.created_at).getTime()}))].filter((x,i,a)=>a.findIndex(y=>y.id===x.id)===i);
+   }
+   const {data:drow}=await supabase.from('driver_profiles').select('*').eq('id',state.session.id).maybeSingle();
+   if(drow&&state.session.role==='DRIVER'){const d=currentUser();if(d)Object.assign(d,{vehicle:drow.vehicle_type,registration:drow.registration_number,verified:drow.verified,verification:drow.verification_status,online:drow.online,lat:drow.current_lat,lng:drow.current_lng,lastSeen:drow.last_seen_at})}
+   render();
+ }catch(e){console.warn('Backend refresh:',e.message||e)}
+}
+async function adminReviewDocument(documentId,decision){if(!state.session||!['ADMIN','SUPER_ADMIN'].includes(state.session.role))return;try{const {error}=await supabase.functions.invoke('admin-review-driver-document',{body:{document_id:documentId,decision,notes:null}});if(error)throw error;toast('Document '+decision.toLowerCase());await refreshAdminDashboard()}catch(e){toast(e.message||'Admin review failed')}}
+async function refreshAdminDashboard(){if(!supabaseReady||!supabase||!state.session)return;try{const {data,error}=await supabase.functions.invoke('admin-dashboard',{method:'GET'});if(error)throw error;state.admin=data||state.admin;render()}catch(e){console.warn('Admin dashboard:',e.message||e)}}
+function editProfile(){
+ const u=currentUser();
+ if(!u){toast('Please login first');return}
+ $('profileName').value=u.name||'';
+ $('profilePhone').value=u.phone||'';
+ const ph=$('profilePhoto');if(ph)ph.value='';
+ openModal('profileModal');
+}
+function saveProfile(){
+ const u=currentUser();
+ if(!u){closeModal('profileModal');toast('Please login first');return}
+ const name=($('profileName').value||'').trim();
+ if(name)u.name=name;
+ const f=$('profilePhoto')?.files?.[0];
+ const finish=()=>{closeModal('profileModal');save();toast('Profile updated successfully')};
+ if(f){
+  if(!f.type.startsWith('image/')){toast('Please select an image');return}
+  const rd=new FileReader();
+  rd.onload=()=>{u.photo=String(rd.result||'');finish()};
+  rd.onerror=()=>toast('Profile photo could not be read');
+  rd.readAsDataURL(f);
+ }else finish();
+}
+async function submitDriverRegistration(){
+ const d=currentUser();if(!d||state.session.role!=='DRIVER'){toast('Login as Driver first');return}
+ d.name=$('regName').value.trim()||d.name;d.phone=$('regPhone').value.trim()||d.phone;d.vehicle=$('regVehicle').value;d.registration=$('regRc').value.trim();
+ const checks=runPrecheck();if(checks.some(x=>x.includes('missing'))){toast('Please upload all required documents');return}
+ if(!supabaseReady||!supabase){toast('Secure verification service is unavailable');return}
+ try{
+   const up=await supabase.from('driver_profiles').upsert({id:d.id,vehicle_type:d.vehicle,registration_number:d.registration,verification_status:'UNDER_REVIEW',verified:false,online:false,emergency_contact:$('regEmergency').value.trim(),upi_id:$('regUpi').value.trim(),updated_at:new Date().toISOString()},{onConflict:'id'});
+   if(up.error)throw up.error;
+   const bucket='driver-documents';
+   for(const id of ['regDl','regId','regRcDoc','regInsurance','regPuc','regPermit','regVehiclePhoto']){
+     const f=$(id)?.files?.[0];if(!f)continue;
+     const path=d.id+'/'+Date.now()+'-'+f.name.replace(/[^a-zA-Z0-9._-]/g,'_');
+     const put=await supabase.storage.from(bucket).upload(path,f,{upsert:false,contentType:f.type||'application/octet-stream'});
+     if(put.error)throw put.error;
+     const type=id==='regDl'?'DRIVING_LICENSE':id==='regId'?'IDENTITY':id==='regRcDoc'?'RC':id==='regInsurance'?'INSURANCE':id==='regPuc'?'PUC':id==='regPermit'?'PERMIT_FITNESS':'VEHICLE_PHOTO';
+     const ins=await supabase.from('driver_documents').insert({driver_id:d.id,document_type:type,storage_path:path,original_filename:f.name,mime_type:f.type,file_size:f.size});
+     if(ins.error)throw ins.error;
+   }
+   d.verification='UNDER_REVIEW';d.verified=false;d.online=false;closeModal('driverModal');await refreshBackend();toast('Documents securely submitted for admin verification');
+ }catch(e){console.error(e);toast('Document submission failed: '+(e.message||'Please try again'))}
+}
+function runPrecheck(){const d=currentUser(),checks=[];if(!d.name)checks.push('name missing');if(!d.registration)checks.push('vehicle registration missing');if($('regDl').files.length===0)checks.push('licence missing');if($('regRcDoc').files.length===0)checks.push('RC missing');if($('regInsurance').files.length===0)checks.push('insurance missing');if($('regPuc').files.length===0)checks.push('PUC missing');return checks.length?checks:['basic fields present'];}
+async function approveDriver(id){toast('Driver approval is handled by the protected admin verification function.');}
+async function rejectDriver(id){toast('Driver rejection is handled by the protected admin verification function.');}
+function rideCustomer(r){const d=state.drivers.find(x=>x.id===r.driverId);let h='<div class="stack"><span class="pill '+(r.status==='RIDE_STARTED'?'ok':'warn')+'">'+r.status+'</span><b>'+esc(r.vehicle)+' • '+esc(r.driverName||'Driver')+'</b>';if(d&&r.status!=='SEARCHING')h+='<div class="success"><b>Driver phone: '+esc(d.phone)+'</b><br>'+esc(d.vehicle)+' • '+esc(d.registration)+'</div>';h+='<span class="muted">'+esc(r.pickup)+' → '+esc(r.destination)+'</span>';if(r.status==='OTP_PENDING')h+='<div class="notice">Ride OTP: <b style="font-size:22px">'+r.otp+'</b></div>';if(r.status==='RIDE_STARTED')h+='<div class="notice">Live location sharing is active for this ride.</div><button class="danger" onclick="sos()">SOS</button><button class="primary" onclick="completeRide()">Complete ride</button>';return h+'</div>'}
+function rideRequest(r){return '<div class="ride"><div class="ride-title"><b>New ride #'+r.id+'</b><span class="pill warn">'+r.vehicle+'</span></div><div>'+esc(r.pickup)+' → '+esc(r.destination)+'</div><div class="small muted">Estimated ₹'+r.fare+' • '+r.distance+' km</div><div class="row" style="margin-top:9px"><button class="primary" onclick="acceptRide()">Accept</button><button class="danger" onclick="rejectRide()">Reject</button></div></div>'}
+function rideDriver(r){return '<div class="ride"><b>Ride #'+r.id+'</b><div class="small">'+esc(r.pickup)+' → '+esc(r.destination)+'</div><div style="margin-top:8px"><b>OTP verification</b><div class="row"><input id="otpInput" maxlength="4" inputmode="numeric" placeholder="4-digit OTP" style="padding:10px;border:1px solid var(--line);border-radius:10px;width:150px"><button class="primary" onclick="verifyOtp()">Verify</button></div><div class="small muted">Maximum 2 attempts. Second wrong attempt cancels the ride.</div></div></div>'}
+function book(){if(!state.session||state.session.role!=='CUSTOMER'){openModal('authModal');chooseRole('CUSTOMER');toast('Login/register as Customer first');return}if(activeRide()){toast('Finish the current ride first');return}const v=vehicle(),d=state.drivers.find(x=>x.online&&x.verification==='APPROVED'&&x.vehicle===v);if(!d){toast('No approved '+v.toLowerCase()+' driver is online');return}const km=Math.max(.1,+$('distance').value||0);const r={id:state.seq++,vehicle:v,pickup:$('pickup').value.trim(),destination:$('destination').value.trim(),distance:km,minutes:+$('minutes').value||1,fare:Math.round(estimate()),status:'SEARCHING',driverId:null,driverName:null,otp:null,otpAttempts:0,created:Date.now()};state.rides.push(r);save();toast('Ride request sent to approved driver')}
+function acceptRide(){const r=state.rides.find(x=>x.status==='SEARCHING');const d=currentUser();if(!r||!d)return;r.driverId=d.id;r.driverName=d.name;r.status='OTP_PENDING';r.otp=String(Math.floor(1000+Math.random()*9000));save();toast('Ride accepted')}
+function rejectRide(){const r=state.rides.find(x=>x.status==='SEARCHING');if(!r)return;r.status='CANCELLED';r.cancelReason='Driver rejected';save();toast('Ride rejected')}
+function verifyOtp(){const r=state.rides.find(x=>x.driverId===state.session.id&&x.status==='OTP_PENDING');if(!r)return;const val=($('otpInput').value||'').replace(/\D/g,'');if(val===r.otp){r.status='RIDE_STARTED';r.otp=null;save();toast('OTP verified — ride started')}else{r.otpAttempts++;if(r.otpAttempts>=2){r.status='CANCELLED';r.otp=null;save();toast('Ride cancelled after 2 wrong OTP attempts')}else{save();toast('Wrong OTP — 1 attempt remaining')}}}
+function completeRide(){const r=activeRide();if(!r||r.status!=='RIDE_STARTED')return;r.status='COMPLETED';const d=state.drivers.find(x=>x.id===r.driverId);if(d)d.earn+=r.fare;save();toast('Ride completed')}
+function sos(){toast('SOS event logged. Connect emergency call/contacts before production launch.')}
+$('splashRetry')?.addEventListener('click',()=>location.reload());
+$('authBtn').onclick=()=>openRoleChooser();
+
+/* Harden auth modal touch/click handling: keep the side-menu backdrop behind the modal. */
+const authModal=$('authModal');
+const authModalClose=$('authModalClose');
+authModal?.addEventListener('click',e=>{if(e.target===authModal)closeModal('authModal')},true);
+
+$('menuBtn')?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();openSide()});
+$('sideClose')?.addEventListener('click',e=>{e.preventDefault();closeSide()});
+$('sideback')?.addEventListener('click',e=>{e.preventDefault();closeSide()});
+document.querySelectorAll('[data-side]').forEach(b=>b.addEventListener('click',()=>{const v=b.dataset.side;document.querySelectorAll('.navbtn[data-view]').forEach(x=>{x.classList.toggle('active',x.dataset.view===v)});document.querySelectorAll('.view').forEach(x=>x.classList.toggle('active',x.id===v));closeSide()}));
+$('sideProfile')?.addEventListener('click',()=>{closeSide();if(currentUser()){editProfile()}else{openModal('authModal');chooseRole('CUSTOMER')}});
+$('sidePrivacy')?.addEventListener('click',()=>{closeSide();showInfo('Privacy Policy','Assam Drive uses account, ride and location information only for providing the ride service, safety, support and required operations. Location sharing is limited to the active ride. Do not upload documents unless required for verification.')});
+$('sideAbout')?.addEventListener('click',()=>{closeSide();showInfo('About Assam Drive','Assam Drive is a ride-booking platform concept for customers and verified driver partners across Assam, with customer, driver and admin workflows.')});
+$('sideTerms')?.addEventListener('click',()=>{closeSide();showInfo('Terms & Conditions','Customers and drivers must provide accurate information and follow applicable transport, safety and payment rules. Driver approval does not replace any government licence, permit, insurance or other legal requirement.')});
+$('sideCare')?.addEventListener('click',()=>{closeSide();showInfo('Customer Care','For help with account, booking, payment or ride issues, contact <b>assamridesupport@gmail.com</b>.')});
+$('sideAI')?.addEventListener('click',()=>{closeSide();showInfo('AI Customer Support','AI support can help with common booking, account and app questions. For payment disputes, safety matters or sensitive account issues, contact customer support directly.')});
+$('emailSupport')?.addEventListener('click',()=>{location.href='mailto:assamridesupport@gmail.com?subject=Assam%20Drive%20Customer%20Support'});
+$('logoutBtn').onclick=async()=>{
+  closeSide();closeModal('authModal');closeModal('driverModal');closeModal('profileModal');
+  if(supabase)await supabase.auth.signOut();
+  state.session=null;state.drivers.forEach(d=>d.online=false);save();
+  toast('Logged out successfully');
+};
+$('driverRegisterBtn').onclick=()=>{if(!state.session||state.session.role!=='DRIVER'){openModal('authModal');chooseRole('DRIVER');toast('Login/register as Driver first')}else{const d=currentUser();$('regName').value=d.name;$('regPhone').value=d.phone;$('regVehicle').value=d.vehicle;$('regRc').value=d.registration;openModal('driverModal')}};
+$('onlineBtn').onclick=async()=>{const d=currentUser();if(!d||state.session.role!=='DRIVER'){openModal('authModal');chooseRole('DRIVER');return}if(d.verification!=='APPROVED'){toast('Admin approval is required before going online');return}try{const pos=coordsFromInput('pickup')||null;await dbRpc('set_driver_presence',{p_online:!d.online,p_lat:pos?.lat||null,p_lng:pos?.lng||null});await refreshBackend();toast(d.online?'Driver is online':'Driver is offline')}catch(e){toast(e.message||'Could not change online status')}};
+$('bookBtn').onclick=book;$('locBtn').onclick=()=>startLocationWatch(true);$('routeBtn').onclick=calculateGoogleRoute;
+['distance','minutes'].forEach(id=>$(id).oninput=renderFare);document.querySelectorAll('input[name=vehicle]').forEach(x=>x.onchange=renderFare);
+$('saveFare').onclick=async()=>{if(!supabaseReady||!supabase){toast('Backend unavailable');return}toast('Fare settings are server-controlled; use the protected admin panel.');};
+document.querySelectorAll('.navbtn[data-view]').forEach(b=>b.onclick=()=>{if(!state.session){openModal('authModal');chooseRole(b.dataset.view==='driver'?'DRIVER':'CUSTOMER');return}if(b.dataset.view==='admin'){if(state.session.role!=='ADMIN'&&state.session.role!=='SUPER_ADMIN')return;render();return}if(b.dataset.view.toUpperCase()!==state.session.role){toast('Please use the correct account type');return}render()});
+
+const GOOGLE_MAPS_KEY='AIzaSyAOVYRIgupAurZup5y1PRh8Ismb1A3lLao';
+let googleMap=null, googleGeocoder=null, googleRoute=null, googlePolylines=[], pickupMarker=null, destinationMarker=null, userLocationMarker=null, liveDriverMarker=null, locationWatchId=null;
+let googleMapsLoaded=false;
+
+function setLocationStatus(msg,ok=false){const el=$('locationStatus');if(el){el.textContent=msg;el.className='small '+(ok?'success':'muted');}}
+function loadGoogleMaps(){
+  if(window.google?.maps){initMap();return}
+  if(document.getElementById('googleMapsScript'))return;
+  window.initMap=initMap;
+  const s=document.createElement('script');
+  s.id='googleMapsScript';
+  s.src='https://maps.googleapis.com/maps/api/js?key='+encodeURIComponent(GOOGLE_MAPS_KEY)+'&libraries=places,routes&v=weekly&callback=initMap';
+  s.async=true;s.defer=true;
+  s.onerror=()=>setLocationStatus('Google Maps could not load. Check API key, billing and API restrictions.');
+  document.head.appendChild(s);
+}
+function initMap(){
+  if(!window.google?.maps||!$('googleMap'))return;
+  googleMapsLoaded=true;
+  googleMap=new google.maps.Map($('googleMap'),{center:{lat:26.1445,lng:91.7362},zoom:12,mapTypeControl:false,streetViewControl:false,fullscreenControl:true,gestureHandling:'greedy'});
+  googleGeocoder=new google.maps.Geocoder();
+  setLocationStatus('Google Maps connected. Enter pickup and destination or use your current location.',true);
+  setupPlaceAutocomplete();
+  if(navigator.geolocation)startLocationWatch(false);
+}
+function setupPlaceAutocomplete(){
+  if(!google.maps.places?.Autocomplete)return;
+  ['pickup','destination'].forEach(id=>{
+    const el=$(id);if(!el||el.dataset.googleAutocomplete)return;
+    const ac=new google.maps.places.Autocomplete(el,{componentRestrictions:{country:'in'},fields:['geometry','formatted_address','name']});
+    ac.addListener('place_changed',()=>{
+      const p=ac.getPlace();
+      if(p.geometry?.location){el.dataset.lat=p.geometry.location.lat();el.dataset.lng=p.geometry.location.lng();if(p.formatted_address)el.value=p.formatted_address;updateMapMarkers();}
+    });
+    el.dataset.googleAutocomplete='1';
+  });
+}
+function coordsFromInput(id){
+  const el=$(id);
+  if(el?.dataset.lat&&el?.dataset.lng)return {lat:+el.dataset.lat,lng:+el.dataset.lng};
+  return null;
+}
+function geocodeInput(id){
+  const el=$(id),value=(el?.value||'').trim();
+  return new Promise((resolve,reject)=>{
+    const known=coordsFromInput(id);if(known)return resolve(known);
+    if(!value||!googleGeocoder)return reject(new Error('Location is empty'));
+    googleGeocoder.geocode({address:value,componentRestrictions:{country:'IN'}},(results,status)=>{
+      if(status==='OK'&&results[0]?.geometry?.location){
+        const p=results[0].geometry.location.toJSON();el.dataset.lat=p.lat;el.dataset.lng=p.lng;resolve(p);
+      }else reject(new Error('Location not found: '+status));
+    });
+  });
+}
+function placeMarker(pos,type,title){
+  if(!googleMap)return;
+  const opts={map:googleMap,position:pos,title};
+  const marker=new google.maps.Marker(opts);
+  if(type==='pickup'){if(pickupMarker)pickupMarker.setMap(null);pickupMarker=marker}
+  if(type==='destination'){if(destinationMarker)destinationMarker.setMap(null);destinationMarker=marker}
+  return marker;
+}
+function updateMapMarkers(){
+  const p=coordsFromInput('pickup'),d=coordsFromInput('destination');
+  if(p)placeMarker(p,'pickup','Pickup');
+  if(d)placeMarker(d,'destination','Destination');
+  if(p&&d)googleMap.fitBounds(new google.maps.LatLngBounds(p,d),80);
+}
+async function calculateGoogleRoute(){
+  if(!googleMapsLoaded){toast('Google Maps is still loading');return}
+  try{
+    const [p,d]=await Promise.all([geocodeInput('pickup'),geocodeInput('destination')]);
+    updateMapMarkers();
+    const {Route}=await google.maps.importLibrary('routes');
+    const v=vehicle();
+    const travelMode=v==='BIKE'?'TWO_WHEELER':'DRIVING';
+    const result=await Route.computeRoutes({origin:p,destination:d,travelMode,fields:['path','distanceMeters','durationMillis'],polylineQuality:'HIGH_QUALITY'});
+    if(!result.routes?.length)throw new Error('No road route found');
+    googlePolylines.forEach(x=>x.setMap(null));googlePolylines=result.routes[0].createPolylines({polylineOptions:{strokeOpacity:.9,strokeWeight:6}});
+    googlePolylines.forEach(x=>x.setMap(googleMap));
+    googleRoute=result.routes[0];
+    const km=(googleRoute.distanceMeters/1000);
+    const mins=Math.max(1,Math.round(googleRoute.durationMillis/60000));
+    $('distance').value=km.toFixed(1);$('minutes').value=mins;
+    renderFare();
+    setLocationStatus('Actual road route: '+km.toFixed(1)+' km • about '+mins+' min',true);
+    const bounds=new google.maps.LatLngBounds();(googleRoute.path||[]).forEach(x=>bounds.extend(x));googleMap.fitBounds(bounds,60);
+  }catch(e){console.error(e);setLocationStatus(e.message||'Could not calculate route');toast('Could not calculate Google route')}
+}
+function startLocationWatch(centerMap=true){
+  if(!navigator.geolocation){setLocationStatus('This device/browser does not support GPS.');return}
+  if(locationWatchId!==null)return;
+  locationWatchId=navigator.geolocation.watchPosition(p=>handleUserLocation(p,centerMap),()=>setLocationStatus('Location permission was not granted.'),{enableHighAccuracy:true,timeout:12000,maximumAge:5000});
+}
+function handleUserLocation(p,centerMap){
+ const pos={lat:p.coords.latitude,lng:p.coords.longitude};
+ const pickup=$('pickup');
+ if(pickup&&!pickup.value){pickup.value='Current location';pickup.dataset.lat=pos.lat;pickup.dataset.lng=pos.lng}
+ if(googleMap){if(userLocationMarker)userLocationMarker.setPosition(pos);else userLocationMarker=new google.maps.Marker({map:googleMap,position:pos,title:'Your current location'});if(centerMap)googleMap.setCenter(pos)}
+ setLocationStatus('Current GPS location detected: '+pos.lat.toFixed(5)+', '+pos.lng.toFixed(5),true);
+ if(state.session?.role==='CUSTOMER'&&googleMap&&state.rides.some(r=>['DRIVER_ASSIGNED','OTP_PENDING','RIDE_STARTED'].includes(r.status))){const r=state.rides.find(r=>['DRIVER_ASSIGNED','OTP_PENDING','RIDE_STARTED'].includes(r.status));if(r?.driverLat&&r?.driverLng){const dp={lat:+r.driverLat,lng:+r.driverLng};if(liveDriverMarker)liveDriverMarker.setPosition(dp);else liveDriverMarker=new google.maps.Marker({map:googleMap,position:dp,title:'Driver live location'});}}
+ if(state.session?.role==='DRIVER'&&supabaseReady&&supabase)dbRpc('update_driver_position',{p_lat:pos.lat,p_lng:pos.lng,p_accuracy:p.coords.accuracy||null}).catch(()=>{});
+}
+
+async function initSupabaseAuth(){
+  try{
+    // Never keep the branded splash waiting for the network.
+    // Render the app immediately, then restore the Supabase session in the background.
+    render();
+    hideSplash();
+    if(!supabaseReady||!supabase)return;
+    const {data,error}=await supabase.auth.getSession();
+    if(error)console.warn('Supabase session check:',error);
+    if(data?.session?.user){
+      const pendingRole=localStorage.getItem('assam_drive_pending_role');
+      const role=data.session.user.app_metadata?.role||data.session.user.user_metadata?.requested_role||pendingRole||state.session?.role||'CUSTOMER';
+      localStorage.removeItem('assam_drive_pending_role');
+      await establishSupabaseUser(role,data.session.user);
+    }else state.session=null;
+    supabase.auth.onAuthStateChange((event,session)=>{
+      if(event==='PASSWORD_RECOVERY'){showPasswordRecovery();return}
+      if(session?.user){
+        if(authFlowStage==='SIGNUP'){
+          /* Signup is intentionally not logged into the app until password setup finishes. */
+          return;
+        }
+        if(authFlowStage==='RECOVERY' || localStorage.getItem('assam_drive_password_recovery')==='1' || passwordRecoveryOtpPending){
+          passwordRecoveryOtpPending=true;
+          showPasswordRecovery();
+          return;
+        }
+        const pendingRole=localStorage.getItem('assam_drive_pending_role');
+        const role=session.user.app_metadata?.role||session.user.user_metadata?.requested_role||pendingRole||state.session?.role||'CUSTOMER';
+        localStorage.removeItem('assam_drive_pending_role');
+        establishSupabaseUser(role,session.user).then(()=>{closeModal('authModal');render()}).catch(e=>console.warn('Auth state sync:',e));
+      }else{state.session=null;closeSide();render()}
+    });
+    render();
+  }catch(e){
+    console.error('Supabase auth initialization failed:',e);
+    state.session=null;
+    try{render()}catch(renderError){console.error('Render after auth error:',renderError)}
+    const status=$('loginGateStatus');
+    if(status)status.textContent='Network/auth service is unavailable. You can retry when your connection is back.';
+    showSplashSlow('Network problem. Check your connection and retry.');
+  }
+}
+loadGoogleMaps();initSupabaseAuth();setInterval(()=>{if(state.session){if(state.session.role==='ADMIN'||state.session.role==='SUPER_ADMIN')refreshAdminDashboard();else refreshBackend()}},5000);window.addEventListener('error',e=>{console.error(e.error||e.message);const d=$('clickDebug');if(d){d.textContent='App error: '+(e.message||'Unknown error');d.style.display='block';d.style.background='#a61e1e'}});
+window.addEventListener('unhandledrejection',e=>{console.error(e.reason);const d=$('clickDebug');if(d){d.textContent='App error: '+(e.reason?.message||'Promise error');d.style.display='block';d.style.background='#a61e1e'}});
+/* Direct login-gate event bridge: capture both touch and click before any other handler. */
+function bindLoginGateButtons(){
+  const login=document.getElementById('loginStartBtn');
+  const signup=document.getElementById('createAccountBtn');
+  const forgot=document.getElementById('forgotPasswordBtn');
+  const bind=(el,fn)=>{
+    if(!el||el.dataset.authBound==='1')return;
+    el.dataset.authBound='1';
+    let lastRun=0;
+    const run=e=>{
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation?.();
+      const now=Date.now();
+      if(now-lastRun<450)return;
+      lastRun=now;
+      try{fn()}catch(err){
+        console.error('Auth action:',err);
+        const s=document.getElementById('loginGateStatus');
+        if(s)s.textContent='Please try again. '+(err?.message||'Authentication error');
+      }
+    };
+    el.addEventListener('pointerup',run,{passive:false,capture:true});
+    el.addEventListener('click',run,{passive:false,capture:true});
+  };
+  bind(login,()=>window.assamDriveAuth('LOGIN'));
+  bind(signup,()=>window.assamDriveAuth('SIGNUP'));
+  bind(forgot,()=>window.assamDriveForgotPassword());
+}
+bindLoginGateButtons();
+document.addEventListener('click',e=>{const b=e.target.closest('button');if(b&&!b.disabled){console.debug('Assam Drive click:',b.textContent.trim()||b.id)}},true);
+
+if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>r.unregister())).catch(()=>{});}
 </script>
 </body>
 </html>
