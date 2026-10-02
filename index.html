@@ -120,9 +120,9 @@ body.login-screen .login-gate{min-height:100dvh;background:
   <div class="login-subtitle">Safe, simple rides across Assam.</div>
   <div class="small" style="color:#71857b;margin-bottom:12px">New user? Create Account • Existing user? Login • Forgot password? Get OTP</div>
   <div class="login-actions premium-actions">
-    <button type="button" class="primary login-main-btn" id="loginStartBtn" onclick="document.getElementById('authModal')?.classList.add('show');if(typeof openRoleChooser==='function'){openRoleChooser('LOGIN')}">🔐 Login <span class="small" style="opacity:.8">• Existing User</span></button>
-    <button type="button" class="create-account-btn login-main-btn" id="createAccountBtn" onclick="openRoleChooser('SIGNUP')">✨ Create Account <span class="small" style="opacity:.75">• New User</span></button>
-    <button type="button" class="login-link-btn" id="forgotPasswordBtn" onclick="openForgotPassword()">Forgot Password? <span class="small">• Get OTP</span></button>
+    <button type="button" class="primary login-main-btn" id="loginStartBtn" onclick="window.assamDriveAuth('LOGIN')">🔐 Login <span class="small" style="opacity:.8">• Existing User</span></button>
+    <button type="button" class="create-account-btn login-main-btn" id="createAccountBtn" onclick="window.assamDriveAuth('SIGNUP')">✨ Create Account <span class="small" style="opacity:.75">• New User</span></button>
+    <button type="button" class="login-link-btn" id="forgotPasswordBtn" onclick="window.assamDriveForgotPassword()">Forgot Password? <span class="small">• Get OTP</span></button>
   </div>
   <div class="login-note"><span>●</span> Customer & Driver accounts are separate</div>
   <div class="login-terms">By continuing, you agree to Assam Drive's<br><u>Terms of Service</u> and <u>Privacy Policy</u></div>
@@ -223,7 +223,31 @@ body.login-screen .login-gate{min-height:100dvh;background:
 <div class="toast" id="toast"></div><div class="click-debug" id="clickDebug">Assam Drive ready</div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>function rideCustomer(r){
+<script>
+/* Assam Drive auth click bridge — keeps mobile auth buttons callable even if inline handlers are restricted. */
+window.assamDriveAuth=function(intent){
+  try{
+    const m=document.getElementById('authModal');
+    if(m){m.classList.add('show');m.style.display='flex';m.style.pointerEvents='auto';m.setAttribute('aria-hidden','false');}
+    if(typeof window.openRoleChooser==='function') return window.openRoleChooser(intent||'LOGIN');
+    if(typeof openRoleChooser==='function') return openRoleChooser(intent||'LOGIN');
+    const s=document.getElementById('loginGateStatus');
+    if(s)s.textContent='Login module is still starting. Please tap again.';
+  }catch(e){
+    console.error('Auth button error:',e);
+    const s=document.getElementById('loginGateStatus');
+    if(s)s.textContent='Please try again. '+(e?.message||'Authentication module error');
+  }
+};
+window.assamDriveForgotPassword=function(){
+  try{
+    if(typeof window.openForgotPassword==='function') return window.openForgotPassword();
+    if(typeof openForgotPassword==='function') return openForgotPassword();
+  }catch(e){
+    console.error('Forgot password error:',e);
+  }
+};
+function rideCustomer(r){
  let h='<div class="stack"><span class="pill '+(r.status==='RIDE_STARTED'?'ok':r.status==='COMPLETED'?'ok':'warn')+'">'+esc(r.status)+'</span><b>'+esc(r.vehicle)+' • '+esc(r.driverName||'Assigned driver')+'</b>';
  if(r.driverId||r.driverPhone)h+='<div class="success"><b>Driver phone: '+esc(r.driverPhone||'Available in active ride')+'</b></div>';
  h+='<span class="muted">'+esc(r.pickup)+' → '+esc(r.destination)+'</span>';
@@ -568,6 +592,9 @@ function passwordLoginForm(role,mode){
  return '<div class="stack"><div class="notice small">Existing '+(role==='DRIVER'?'Driver':'Customer')+' account.</div>'+input+'<input id="authLoginPassword" class="login-password" type="password" autocomplete="current-password" placeholder="Password"><button class="primary" type="button" onclick="loginWithPassword(\''+role+'\',\''+mode+'\')">🔐 Sign In</button><button class="login-link" type="button" onclick="openForgotPassword()">Forgot Password? Get OTP</button><button class="ghost" type="button" onclick="openRoleChooser(\'LOGIN\')">← Change account type</button></div>';
 }
 function openPasswordLogin(role,mode='EMAIL'){
+ authFlowStage='LOGIN';
+ authIntent='LOGIN';
+ selectedAccountRole=role;
  openModal('authModal');$('authForm').innerHTML=passwordLoginForm(role,mode);
 }
 function normalizePhone(raw){
