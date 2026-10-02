@@ -375,6 +375,30 @@ function openPasswordLogin(role,mode='PHONE'){
 let selectedAccountRole='';
 let authIntent='BOTH';
 let passwordRecoveryOtpPending=false;
+/* Robust mobile role controls: bind both click and pointerup so account selection cannot be blocked by stale inline handlers. */
+function bindRoleControls(){
+  const customer=$('roleCustomerBtn'),driver=$('roleDriverBtn'),next=$('roleNextBtn');
+  const activate=(role)=>{
+    try{
+      if(role==='CUSTOMER') selectAccountRole('CUSTOMER');
+      else selectAccountRole('DRIVER');
+    }catch(e){console.error('Role selection failed',e);toast('Please try again');}
+  };
+  [customer,driver].forEach((el,idx)=>{
+    if(!el)return;
+    el.onclick=null;
+    el.addEventListener('pointerup',e=>{e.preventDefault();e.stopPropagation();activate(idx===0?'CUSTOMER':'DRIVER')},{passive:false});
+    el.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();activate(idx===0?'CUSTOMER':'DRIVER')});
+  });
+  if(next){
+    next.onclick=null;
+    next.addEventListener('pointerup',e=>{e.preventDefault();e.stopPropagation();nextAccountRole()},{passive:false});
+    next.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();nextAccountRole()});
+  }
+}
+document.addEventListener('DOMContentLoaded',bindRoleControls);
+setTimeout(bindRoleControls,0);
+setTimeout(bindRoleControls,500);
 function selectAccountRole(role){
   selectedAccountRole=role;
   const cb=$('roleCustomerBtn'),db=$('roleDriverBtn'),next=$('roleNextBtn');
