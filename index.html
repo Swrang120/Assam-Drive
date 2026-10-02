@@ -355,18 +355,6 @@ async function gateGoogleLogin(){
  });
  if(error)gateSetStatus(error.message);
 }
-function gateEmailLogin(){openPasswordLogin('CUSTOMER','EMAIL')}
-function passwordLoginForm(role,mode='PHONE'){
- const label=mode==='EMAIL'?'Gmail / Email address':'Mobile number';
- const input=mode==='EMAIL'
-  ? '<input id="authLoginEmail" class="login-password" type="email" autocomplete="email" placeholder="you@example.com">'
-  : '<div class="login-phone"><div class="country">+91⌄</div><input id="authLoginPhone" inputmode="tel" autocomplete="tel" placeholder="10-digit mobile number"></div>';
- return '<div class="stack"><div class="notice small">Returning user? Enter your '+(mode==='EMAIL'?'email':'mobile number')+' and password.</div>'+input+'<input id="authLoginPassword" class="login-password" type="password" autocomplete="current-password" placeholder="Password"><button class="primary" type="button" onclick="loginWithPassword(\''+role+'\',\''+mode+'\')">Login</button><button class="login-link" type="button" onclick="chooseRole(\''+role+'\')">Create account / use OTP instead</button></div>';
-}
-function openPasswordLogin(role,mode='PHONE'){
- openModal('authModal');
- $('authForm').innerHTML=passwordLoginForm(role,mode);
-}
 let selectedAccountRole='';
 let authIntent='BOTH';
 let passwordRecoveryOtpPending=false;
