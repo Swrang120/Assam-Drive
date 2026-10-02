@@ -457,7 +457,8 @@ async function verifySignupEmailOtp(role,en,ep,ee){
  if(token.length<4){toast('Enter the verification code');return}
  const {data,error}=await supabase.auth.verifyOtp({email,token,type:'email'});
  if(error){toast(error.message);return}
- await establishSupabaseUser(role,data.user,{name,phone,email});
+ if(!data?.user){toast('Gmail verification did not return an account. Please try again.');return}
+ /* Do not enter the app yet. Password setup completes the signup flow. */
  showSetPassword(role,'EMAIL',email,{name,phone});
 }
 async function startEmailSignup(role){startAccountSignup(role)}
@@ -485,6 +486,7 @@ async function setAccountPassword(role,mode,ei,en='',ep=''){
  const name=decodeURIComponent(en),phone=decodeURIComponent(ep);
  const {error}=await supabase.auth.updateUser({password:p,data:{full_name:name,mobile_number:phone,requested_role:role}});
  if(error){toast(error.message);return}
+ authFlowStage='IDLE';
  await supabase.auth.signOut();
  state.session=null;save();
  setAuthFlow((role==='DRIVER'?'Driver':'Customer')+' • Account Ready','Your Gmail is verified and your password is set.');
