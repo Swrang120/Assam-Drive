@@ -1,0 +1,23 @@
+name: Validate Assam Drive JavaScript
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extract and check JavaScript
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          s=Path("index.html").read_text()
+          blocks=re.findall(r"<script(?:\s[^>]*)?>([\\s\\S]*?)</script>",s,re.I)
+          js=[b for b in blocks if "SUPABASE_URL" in b]
+          Path("/tmp/app.js").write_text("\n".join(js))
+          print("JS blocks:",len(blocks),"app blocks:",len(js))
+          PY
+          node --check /tmp/app.js
