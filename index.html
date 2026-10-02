@@ -721,7 +721,11 @@ function handleUserLocation(p,centerMap){
 
 async function initSupabaseAuth(){
   try{
-    if(!supabaseReady||!supabase){render();hideSplash();return}
+    // Never keep the branded splash waiting for the network.
+    // Render the app immediately, then restore the Supabase session in the background.
+    render();
+    hideSplash();
+    if(!supabaseReady||!supabase)return;
     const {data,error}=await supabase.auth.getSession();
     if(error)console.warn('Supabase session check:',error);
     if(data?.session?.user){
@@ -745,7 +749,6 @@ async function initSupabaseAuth(){
       }else{state.session=null;closeSide();render()}
     });
     render();
-    hideSplash();
   }catch(e){
     console.error('Supabase auth initialization failed:',e);
     state.session=null;
