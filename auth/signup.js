@@ -2,7 +2,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 const URL='https://fvigmtojeywwyhfgyeww.supabase.co';
 const KEY='sb_publishable_DV1qmRyMo7kjtJxQ2JW_HA_rF9ACkuf';
 const db=window.supabase.createClient(URL,KEY);
-let role='';
+let role=new URLSearchParams(location.search).get('role')||'';
 const $=id=>document.getElementById(id);
 const status=msg=>{$('status').textContent=msg||''};
 
