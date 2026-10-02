@@ -184,20 +184,15 @@ body.login-screen .login-gate{min-height:100dvh;background:
 </main>
 </div>
 
-<div class="modal auth-modal-fixed" id="authModal"><div class="modalbox stack">
-<div class="row between"><h2>Assam Drive account</h2><button type="button" class="ghost" id="authModalClose" onclick="event.preventDefault();event.stopPropagation();var m=document.getElementById('authModal');m.classList.remove('show');m.style.display='none';m.style.pointerEvents='none'">✕</button></div>
-<div class="role" id="accountRoleChooser">
-<button type="button" id="roleCustomerBtn" class="role-entry customer-entry" onclick="event.preventDefault();event.stopPropagation();selectAccountRole('CUSTOMER')">
-  <span class="role-icon">👤</span><b>Customer</b><span class="small role-desc">Book rides & manage trips</span>
-</button>
-<button type="button" id="roleDriverBtn" class="role-entry driver-entry" onclick="event.preventDefault();event.stopPropagation();selectAccountRole('DRIVER')">
-  <span class="role-icon">🚗</span><b>Driver</b><span class="small role-desc">Register, verify & drive</span>
-</button>
+<div class="modal auth-modal-fixed" id="authModal" aria-hidden="true">
+<div class="modalbox stack">
+  <div class="row between">
+    <div><div id="authFlowTitle" style="font-size:21px;font-weight:900">Assam Drive</div><div id="authFlowSubtitle" class="small muted">Secure account access</div></div>
+    <button type="button" class="ghost" id="authModalClose" onclick="closeModal('authModal')">✕</button>
+  </div>
+  <div id="authForm"></div>
 </div>
-<button type="button" id="roleNextBtn" class="role-next" disabled onclick="event.preventDefault();event.stopPropagation();nextAccountRole()">Continue →</button>
-<div class="small muted" style="text-align:center">Tap an account type first, then tap Continue.</div>
-<div id="authForm"></div>
-</div></div>
+</div>
 
 <div class="modal" id="driverModal"><div class="modalbox stack">
 <div class="row between"><h2>Driver registration</h2><button class="ghost" onclick="closeModal('driverModal')">✕</button></div>
@@ -375,71 +370,70 @@ function openPasswordLogin(role,mode='PHONE'){
 let selectedAccountRole='';
 let authIntent='BOTH';
 let passwordRecoveryOtpPending=false;
-/* Robust mobile role controls: bind both click and pointerup so account selection cannot be blocked by stale inline handlers. */
-function bindRoleControls(){
-  const customer=$('roleCustomerBtn'),driver=$('roleDriverBtn'),next=$('roleNextBtn');
-  const activate=(role)=>{
-    try{
-      if(role==='CUSTOMER') selectAccountRole('CUSTOMER');
-      else selectAccountRole('DRIVER');
-    }catch(e){console.error('Role selection failed',e);toast('Please try again');}
-  };
-  [customer,driver].forEach((el,idx)=>{
-    if(!el)return;
-    el.onclick=null;
-    el.addEventListener('pointerup',e=>{e.preventDefault();e.stopPropagation();activate(idx===0?'CUSTOMER':'DRIVER')},{passive:false});
-    el.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();activate(idx===0?'CUSTOMER':'DRIVER')});
-  });
-  if(next){
-    next.onclick=null;
-    next.addEventListener('pointerup',e=>{e.preventDefault();e.stopPropagation();nextAccountRole()},{passive:false});
-    next.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();nextAccountRole()});
-  }
+
+/* Separate, direct authentication flows.
+   LOGIN, CREATE ACCOUNT and FORGOT PASSWORD never share a role-selection step or state. */
+function setAuthFlow(title,subtitle){
+  $('authFlowTitle').textContent=title;
+  $('authFlowSubtitle').textContent=subtitle;
 }
-document.addEventListener('DOMContentLoaded',bindRoleControls);
-setTimeout(bindRoleControls,0);
-setTimeout(bindRoleControls,500);
+function authRoleCards(intent){
+  const action=intent==='SIGNUP'
+    ? 'Create'
+    : 'Sign In';
+  const sub=intent==='SIGNUP'
+    ? 'Choose which type of account you want to create.'
+    : 'Choose the account you already have.';
+  setAuthFlow(intent==='SIGNUP'?'Create Account':'Login',sub);
+  $('authForm').innerHTML='<div class="stack">'+
+    '<div class="notice"><b>'+esc(sub)+'</b></div>'+
+    '<button type="button" class="role-entry customer-entry" style="min-height:118px;width:100%" onclick="chooseRole(\'CUSTOMER\')"><span class="role-icon">👤</span><b>'+action+' Customer Account</b><span class="small role-desc">'+(intent==='SIGNUP'?'Book rides & manage trips':'Customer Gmail + password')+'</span></button>'+
+    '<button type="button" class="role-entry driver-entry" style="min-height:118px;width:100%" onclick="chooseRole(\'DRIVER\')"><span class="role-icon">🚗</span><b>'+action+' Driver Account</b><span class="small role-desc">'+(intent==='SIGNUP'?'Register, verify & drive':'Driver Gmail + password')+'</span></button>'+
+    (intent==='SIGNUP'
+      ? '<button type="button" class="ghost" onclick="openRoleChooser(\'LOGIN\')">Already have an account? Login</button>'
+      : '<button type="button" class="ghost" onclick="openRoleChooser(\'SIGNUP\')">New user? Create Account</button>')+
+    '<button type="button" class="login-link" onclick="openForgotPassword()">Forgot Password? Get OTP</button>'+
+  '</div>';
+}
 function selectAccountRole(role){
-  selectedAccountRole=role;
-  const cb=$('roleCustomerBtn'),db=$('roleDriverBtn'),next=$('roleNextBtn');
-  if(cb)cb.classList.toggle('selected',role==='CUSTOMER');
-  if(db)db.classList.toggle('selected',role==='DRIVER');
-  if(next){next.disabled=false;next.classList.add('ready');next.textContent='Next →';}
-  const form=$('authForm');
-  if(form)form.innerHTML='<div class="small muted" style="text-align:center;margin-top:2px">Selected: <b>'+esc(role==='DRIVER'?'Driver':'Customer')+'</b>. Tap Next to continue.</div>';
+  /* Kept as a compatibility alias for older cached pages. */
+  chooseRole(role);
 }
 function nextAccountRole(){
-  if(!selectedAccountRole){toast('Please select Customer or Driver first');return}
-  chooseRole(selectedAccountRole);
+  /* Kept as a compatibility alias for older cached pages. */
+  if(selectedAccountRole) chooseRole(selectedAccountRole);
+  else toast('Please select Customer or Driver');
 }
+function bindRoleControls(){ /* no-op: role controls are now direct buttons */ }
+
 function openRoleChooser(intent='BOTH'){
   if(state.session){toast('You are already logged in');return}
   closeSide();
   authIntent=intent||'BOTH';
   selectedAccountRole='';
   openModal('authModal');
-  const form=$('authForm');
-  if(form)form.innerHTML='<div class="small muted" style="text-align:center;margin-top:2px">Choose Customer or Driver.</div>';
-  $('roleCustomerBtn')?.classList.remove('selected');
-  $('roleDriverBtn')?.classList.remove('selected');
-  const next=$('roleNextBtn');
-  if(next){next.disabled=true;next.classList.remove('ready');next.textContent='Continue →'}
+  if(authIntent==='SIGNUP') authRoleCards('SIGNUP');
+  else authRoleCards('LOGIN');
 }
 function chooseRole(role){
+  if(role!=='CUSTOMER'&&role!=='DRIVER'){toast('Choose Customer or Driver');return}
   selectedAccountRole=role;
-  const cb=$('roleCustomerBtn'),db=$('roleDriverBtn');
-  if(cb)cb.classList.toggle('selected',role==='CUSTOMER');
-  if(db)db.classList.toggle('selected',role==='DRIVER');
-  const next=$('roleNextBtn');
-  if(next){next.disabled=false;next.classList.add('ready');next.textContent='Continue →'}
-  const title=role==='DRIVER'?'Driver':'Customer';
-  const icon=role==='DRIVER'?'🚗':'👤';
-  if(authIntent==='LOGIN'){openPasswordLogin(role,'EMAIL');return}
-  if(authIntent==='SIGNUP'){startAccountSignup(role);return}
-  $('authForm').innerHTML='<div class="stack"><div class="notice"><b>'+icon+' '+title+' account</b><br>Choose Sign In or Sign Up for your '+title.toLowerCase()+' account.</div><button class="primary" type="button" onclick="openPasswordLogin(\''+role+'\',\'EMAIL\')">🔐 Sign In with Gmail</button><button class="secondary" type="button" onclick="startAccountSignup(\''+role+'\')">✨ Sign Up / Create Account</button><button class="ghost" type="button" onclick="openRoleChooser(authIntent)">← Change account type</button></div>';
+  if(authIntent==='SIGNUP'){
+    startAccountSignup(role);
+  }else{
+    openPasswordLogin(role,'EMAIL');
+  }
 }
 function startAccountSignup(role){
- $('authForm').innerHTML='<div class="stack"><div class="field"><label>Full name</label><input id="signupName" class="login-password" type="text" autocomplete="name" placeholder="Enter your full name"></div><div class="field"><label>Mobile number</label><div class="login-phone"><div class="country">+91</div><input id="signupPhone" inputmode="tel" autocomplete="tel" placeholder="10-digit mobile number"></div><div class="small muted">Mobile number is saved with your account. SMS OTP verification will be added later.</div></div><div class="field"><label>Gmail / Email address</label><input id="signupEmail" class="login-password" type="email" autocomplete="email" placeholder="you@gmail.com"></div><button class="primary" type="button" onclick="sendSignupEmailOtp(\''+role+'\')">Send Gmail OTP</button><button class="ghost" type="button" onclick="chooseRole(\''+role+'\')">Back</button></div>';
+  setAuthFlow((role==='DRIVER'?'Driver':'Customer')+' • Create Account','Gmail verification is required before password setup.');
+  $('authForm').innerHTML='<div class="stack">'+
+    '<div class="success">New '+(role==='DRIVER'?'Driver':'Customer')+' account</div>'+
+    '<div class="field"><label>Full name</label><input id="signupName" class="login-password" type="text" autocomplete="name" placeholder="Enter your full name"></div>'+
+    '<div class="field"><label>Mobile number</label><div class="login-phone"><div class="country">+91</div><input id="signupPhone" inputmode="tel" autocomplete="tel" placeholder="10-digit mobile number"></div><div class="small muted">Your mobile number will be saved with the account.</div></div>'+
+    '<div class="field"><label>Gmail / Email address</label><input id="signupEmail" class="login-password" type="email" autocomplete="email" placeholder="you@gmail.com"></div>'+
+    '<button class="primary" type="button" onclick="sendSignupEmailOtp(\''+role+'\')">📩 Send Gmail OTP</button>'+
+    '<button class="ghost" type="button" onclick="openRoleChooser(\'SIGNUP\')">← Change account type</button>'+
+  '</div>';
 }
 async function sendSignupEmailOtp(role){
  if(!supabaseReady||!supabase){toast('Login service is still loading.');return}
@@ -449,10 +443,10 @@ async function sendSignupEmailOtp(role){
  if(name.length<2){toast('Enter your full name');return}
  if(!/^\\+91\\d{10}$/.test(phone)){toast('Enter a valid 10-digit Indian mobile number');return}
  if(!/^\\S+@\\S+\\.\\S+$/.test(email)){toast('Enter a valid Gmail/email address');return}
- $('authForm').innerHTML='<div class="success">Sending Gmail OTP to '+esc(email)+'…</div>';
+ setAuthFlow((role==='DRIVER'?'Driver':'Customer')+' • Verify Gmail','Enter the OTP sent to '+email+'.');
+ $('authForm').innerHTML='<div class="stack"><div class="success">OTP sent to '+esc(email)+' ✓</div><div class="field"><label>Gmail OTP</label><input id="signupEmailOtp" maxlength="6" inputmode="numeric" autocomplete="one-time-code" class="login-password" placeholder="Enter 6-digit OTP"></div><button class="primary" type="button" onclick="verifySignupEmailOtp(\''+role+'\',\''+encodeURIComponent(name)+'\',\''+encodeURIComponent(phone)+'\',\''+encodeURIComponent(email)+'\')">Verify Gmail & Continue</button><button class="ghost" type="button" onclick="startAccountSignup(\''+role+'\')">← Back</button></div>';
  const {error}=await supabase.auth.signInWithOtp({email,options:{data:{requested_role:role,full_name:name,mobile_number:phone}}});
- if(error){$('authForm').innerHTML='<div class="notice">'+esc(error.message)+'</div><button class="secondary" type="button" onclick="startAccountSignup(\''+role+'\')">Try again</button>';return}
- $('authForm').innerHTML='<div class="stack"><div class="success">OTP sent to '+esc(email)+'</div><div class="field"><label>Gmail OTP</label><input id="signupEmailOtp" maxlength="6" inputmode="numeric" autocomplete="one-time-code" class="login-password" placeholder="Enter 6-digit OTP"></div><button class="primary" type="button" onclick="verifySignupEmailOtp(\''+role+'\',\''+encodeURIComponent(name)+'\',\''+encodeURIComponent(phone)+'\',\''+encodeURIComponent(email)+'\')">Verify Gmail & Continue</button><button class="ghost" type="button" onclick="startAccountSignup(\''+role+'\')">Change details</button></div>';
+ if(error){toast(error.message);startAccountSignup(role);return}
 }
 async function verifySignupEmailOtp(role,en,ep,ee){
  const name=decodeURIComponent(en),phone=decodeURIComponent(ep),email=decodeURIComponent(ee);
@@ -463,12 +457,8 @@ async function verifySignupEmailOtp(role,en,ep,ee){
  await establishSupabaseUser(role,data.user,{name,phone,email});
  showSetPassword(role,'EMAIL',email,{name,phone});
 }
-async function startEmailSignup(role){
- startAccountSignup(role);
-}
-async function sendEmailOtp(role){
- startAccountSignup(role);
-}
+async function startEmailSignup(role){startAccountSignup(role)}
+async function sendEmailOtp(role){startAccountSignup(role)}
 async function verifyEmailSignup(role,ee){
  const email=decodeURIComponent(ee);
  const token=($('authEmailOtp')?.value||'').replace(/\\D/g,'');
@@ -481,7 +471,8 @@ async function verifyEmailSignup(role,ee){
  showSetPassword(role,'EMAIL',email,{name,phone});
 }
 function showSetPassword(role,mode,identifier,profile={}){
- $('authForm').innerHTML='<div class="stack"><div class="success">Gmail verified successfully ✓</div><div class="notice"><b>Final step</b><br>Create your password.</div><div class="field"><label>Create password</label><input id="newPassword" class="login-password" type="password" autocomplete="new-password" placeholder="At least 8 characters"></div><div class="field"><label>Confirm password</label><input id="confirmPassword" class="login-password" type="password" autocomplete="new-password" placeholder="Repeat password"></div><button class="primary" type="button" onclick="setAccountPassword(\''+role+'\',\''+mode+'\',\''+encodeURIComponent(identifier)+'\',\''+encodeURIComponent(profile.name||'')+'\',\''+encodeURIComponent(profile.phone||'')+'\')">Complete Account</button><div class="small muted">Your password is handled securely by Supabase Auth.</div></div>';
+ setAuthFlow((role==='DRIVER'?'Driver':'Customer')+' • Set Password','Gmail verified successfully. Create your password.');
+ $('authForm').innerHTML='<div class="stack"><div class="success">Gmail verified successfully ✓</div><div class="field"><label>Create password</label><input id="newPassword" class="login-password" type="password" autocomplete="new-password" placeholder="At least 8 characters"></div><div class="field"><label>Confirm password</label><input id="confirmPassword" class="login-password" type="password" autocomplete="new-password" placeholder="Repeat password"></div><button class="primary" type="button" onclick="setAccountPassword(\''+role+'\',\''+mode+'\',\''+encodeURIComponent(identifier)+'\',\''+encodeURIComponent(profile.name||'')+'\',\''+encodeURIComponent(profile.phone||'')+'\')">Complete Account</button><div class="small muted">Your password is handled securely by Supabase Auth.</div></div>';
 }
 async function setAccountPassword(role,mode,ei,en='',ep=''){
  if(!supabaseReady||!supabase){toast('Login service is unavailable.');return}
@@ -492,49 +483,42 @@ async function setAccountPassword(role,mode,ei,en='',ep=''){
  const {error}=await supabase.auth.updateUser({password:p,data:{full_name:name,mobile_number:phone,requested_role:role}});
  if(error){toast(error.message);return}
  await supabase.auth.signOut();
- state.session=null;
- save();
- $('authForm').innerHTML='<div class="stack"><div class="success">Account created successfully ✓</div><div class="notice">Your Gmail is verified and your password is set. Now login to continue.</div><button class="primary" type="button" onclick="openPasswordLogin(\''+role+'\',\'EMAIL\')">🔐 Login with Gmail + Password</button></div>';
+ state.session=null;save();
+ setAuthFlow((role==='DRIVER'?'Driver':'Customer')+' • Account Ready','Your Gmail is verified and your password is set.');
+ $('authForm').innerHTML='<div class="stack"><div class="success">Account created successfully ✓</div><div class="notice">Now sign in with your Gmail and password.</div><button class="primary" type="button" onclick="openPasswordLogin(\''+role+'\',\'EMAIL\')">🔐 Login with Gmail + Password</button></div>';
 }
 function openForgotPassword(){
   if(state.session){toast('You are already logged in');return}
   closeSide();openModal('authModal');
   passwordRecoveryOtpPending=false;
-  $('authForm').innerHTML='<div class="stack"><div class="notice"><b>🔑 Forgot Password</b><br>Enter the Gmail/email linked to your Assam Drive account. We will send a one-time OTP through Supabase.</div><div class="field"><label>Gmail / Email address</label><input id="recoveryEmail" type="email" autocomplete="email" placeholder="you@gmail.com"></div><button class="primary" type="button" onclick="sendPasswordReset()">Send OTP</button><button class="ghost" type="button" onclick="openRoleChooser(\'LOGIN\')">← Back to Sign In</button></div>';
+  setAuthFlow('Forgot Password','This flow is separate from Login and Create Account.');
+  $('authForm').innerHTML='<div class="stack"><div class="notice"><b>🔑 Reset your password</b><br>Enter the Gmail/email linked to your Assam Drive account. We will send a one-time OTP.</div><div class="field"><label>Gmail / Email address</label><input id="recoveryEmail" type="email" autocomplete="email" placeholder="you@gmail.com"></div><button class="primary" type="button" onclick="sendPasswordReset()">📩 Send OTP</button><button class="ghost" type="button" onclick="openRoleChooser('LOGIN')">← Back to Login</button></div>';
 }
 async function sendPasswordReset(){
   if(!supabaseReady||!supabase){toast('Login service is unavailable.');return}
   const email=($('recoveryEmail')?.value||'').trim().toLowerCase();
-  if(!/^\S+@\S+\.\S+$/.test(email)){toast('Enter a valid Gmail/email address');return}
+  if(!/^\\S+@\\S+\\.\\S+$/.test(email)){toast('Enter a valid Gmail/email address');return}
   passwordRecoveryOtpPending=true;
   localStorage.setItem('assam_drive_password_recovery','1');
-  const {error}=await supabase.auth.signInWithOtp({
-    email,
-    options:{shouldCreateUser:false}
-  });
-  if(error){
-    passwordRecoveryOtpPending=false;
-    localStorage.removeItem('assam_drive_password_recovery');
-    toast(error.message);
-    return;
-  }
-  $('authForm').innerHTML='<div class="stack"><div class="success">OTP sent ✓</div><div class="field"><label>Enter Gmail OTP</label><input id="recoveryOtp" maxlength="6" inputmode="numeric" autocomplete="one-time-code" class="login-password" placeholder="6-digit OTP"></div><button class="primary" type="button" onclick="verifyPasswordResetOtp()">Verify OTP</button><button class="ghost" type="button" onclick="openForgotPassword()">Change email</button></div>';
+  const {error}=await supabase.auth.signInWithOtp({email,options:{shouldCreateUser:false}});
+  if(error){passwordRecoveryOtpPending=false;localStorage.removeItem('assam_drive_password_recovery');toast(error.message);return}
+  setAuthFlow('Forgot Password • Verify OTP','Enter the OTP sent to '+email+'.');
+  $('authForm').innerHTML='<div class="stack"><div class="success">OTP sent ✓</div><div class="field"><label>Gmail OTP</label><input id="recoveryOtp" maxlength="6" inputmode="numeric" autocomplete="one-time-code" class="login-password" placeholder="6-digit OTP"></div><button class="primary" type="button" onclick="verifyPasswordResetOtp()">Verify OTP</button><button class="ghost" type="button" onclick="openForgotPassword()">Change email</button></div>';
 }
 async function verifyPasswordResetOtp(){
   if(!supabaseReady||!supabase){toast('Login service is unavailable.');return}
   const email=($('recoveryEmail')?.value||'').trim().toLowerCase();
-  const token=($('recoveryOtp')?.value||'').replace(/\D/g,'');
-  if(!/^\S+@\S+\.\S+$/.test(email)){toast('Enter a valid Gmail/email address');return}
+  const token=($('recoveryOtp')?.value||'').replace(/\\D/g,'');
+  if(!/^\\S+@\\S+\\.\\S+$/.test(email)){toast('Enter a valid Gmail/email address');return}
   if(token.length<4){toast('Enter the OTP from Gmail');return}
-  passwordRecoveryOtpPending=true;
-  localStorage.setItem('assam_drive_password_recovery','1');
+  passwordRecoveryOtpPending=true;localStorage.setItem('assam_drive_password_recovery','1');
   const {data,error}=await supabase.auth.verifyOtp({email,token,type:'email'});
   if(error){toast(error.message);return}
   if(!data?.session){toast('OTP verified, but a secure session was not created. Please try again.');return}
   showPasswordRecovery();
 }
 function showPasswordRecovery(){
-  openModal('authModal');
+  openModal('authModal');setAuthFlow('Forgot Password • New Password','OTP verified. Choose a new password.');
   $('authForm').innerHTML='<div class="stack"><div class="notice"><b>Set a new password</b></div><div class="field"><label>New password</label><input id="recoveryNewPassword" type="password" autocomplete="new-password" placeholder="At least 8 characters"></div><div class="field"><label>Confirm password</label><input id="recoveryConfirmPassword" type="password" autocomplete="new-password" placeholder="Repeat password"></div><button class="primary" type="button" onclick="finishPasswordRecovery()">Update Password</button></div>';
 }
 async function finishPasswordRecovery(){
@@ -544,12 +528,20 @@ async function finishPasswordRecovery(){
   if(p!==q){toast('Passwords do not match');return}
   const {error}=await supabase.auth.updateUser({password:p});
   if(error){toast(error.message);return}
-  passwordRecoveryOtpPending=false;
-  localStorage.removeItem('assam_drive_password_recovery');
-  await supabase.auth.signOut();
-  state.session=null;
-  render();
-  $('authForm').innerHTML='<div class="stack"><div class="success">Password updated successfully ✓</div><div class="notice">Your password has been changed. Sign in with your Gmail and new password.</div><button class="primary" type="button" onclick="openPasswordLogin(\'CUSTOMER\',\'EMAIL\')">🔐 Sign In</button></div>';
+  passwordRecoveryOtpPending=false;localStorage.removeItem('assam_drive_password_recovery');
+  await supabase.auth.signOut();state.session=null;render();
+  setAuthFlow('Password Updated','Your password has been changed successfully.');
+  $('authForm').innerHTML='<div class="stack"><div class="success">Password updated successfully ✓</div><div class="notice">Sign in with your Gmail and new password.</div><button class="primary" type="button" onclick="openRoleChooser(\'LOGIN\')">🔐 Back to Login</button></div>';
+}
+function passwordLoginForm(role,mode){
+ setAuthFlow((role==='DRIVER'?'Driver':'Customer')+' • Login','Use your existing Gmail and password.');
+ const input=mode==='EMAIL'
+  ? '<input id="authLoginEmail" class="login-password" type="email" autocomplete="email" placeholder="you@example.com">'
+  : '<div class="login-phone"><div class="country">+91</div><input id="authLoginPhone" inputmode="tel" autocomplete="tel" placeholder="10-digit mobile number"></div>';
+ return '<div class="stack"><div class="notice small">Existing '+(role==='DRIVER'?'Driver':'Customer')+' account.</div>'+input+'<input id="authLoginPassword" class="login-password" type="password" autocomplete="current-password" placeholder="Password"><button class="primary" type="button" onclick="loginWithPassword(\''+role+'\',\''+mode+'\')">🔐 Sign In</button><button class="login-link" type="button" onclick="openForgotPassword()">Forgot Password? Get OTP</button><button class="ghost" type="button" onclick="openRoleChooser(\'LOGIN\')">← Change account type</button></div>';
+}
+function openPasswordLogin(role,mode='EMAIL'){
+ openModal('authModal');$('authForm').innerHTML=passwordLoginForm(role,mode);
 }
 function normalizePhone(raw){
  const digits=(raw||'').replace(/\D/g,'');
