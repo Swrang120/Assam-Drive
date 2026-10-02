@@ -135,9 +135,19 @@ try{
 }catch(e){console.warn('Supabase init failed',e)}
 const KEY='assam-drive-v2';
 const defaults={session:null,customers:[],drivers:[{id:'DRV-DEMO',name:'Demo Driver',phone:'+91 9000000000',vehicle:'BIKE',registration:'AS-01-AB-1234',verified:true,verification:'APPROVED',online:false,earn:0,photo:'',documents:[],checks:[]}],rides:[],fare:{BIKE:{base:20,km:10,min:1},AUTO:{base:30,km:14,min:1},CAR:{base:50,km:18,min:2}},seq:1001};
-let state=JSON.parse(localStorage.getItem(KEY)||'null')||JSON.parse(JSON.stringify(defaults));
+let state;
+try{state=JSON.parse(localStorage.getItem(KEY)||'null')}catch(e){state=null;console.warn('Resetting invalid local app data',e)}
+if(!state||typeof state!=='object')state=JSON.parse(JSON.stringify(defaults));
+state.customers=Array.isArray(state.customers)?state.customers:[];
+state.drivers=Array.isArray(state.drivers)?state.drivers:[];
+state.rides=Array.isArray(state.rides)?state.rides:[];
+state.fare=state.fare&&typeof state.fare==='object'?state.fare:JSON.parse(JSON.stringify(defaults.fare));
+for(const v of ['BIKE','AUTO','CAR']){if(!state.fare[v]||typeof state.fare[v]!=='object')state.fare[v]=JSON.parse(JSON.stringify(defaults.fare[v]));if(!Number.isFinite(+state.fare[v].km))state.fare[v].km=defaults.fare[v].km}
+if(!Number.isFinite(+state.seq))state.seq=1001;
+if(!state.drivers.length)state.drivers.push(JSON.parse(JSON.stringify(defaults.drivers[0])));
+state.drivers.forEach(d=>{d.documents=Array.isArray(d.documents)?d.documents:[];d.checks=Array.isArray(d.checks)?d.checks:[];d.earn=Number.isFinite(+d.earn)?+d.earn:0;d.verification=d.verification||'PENDING';d.online=!!d.online;d.vehicle=d.vehicle||'BIKE';d.registration=d.registration||'';d.phone=d.phone||'';d.name=d.name||'Driver'});
 const $=id=>document.getElementById(id);
-const save=()=>{localStorage.setItem(KEY,JSON.stringify(state));render()};
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){console.warn('Local save failed',e)}render()};
 function toast(x){const t=$('toast');t.textContent=x;t.style.display='block';clearTimeout(window.__toast);window.__toast=setTimeout(()=>t.style.display='none',2300)}
 function openModal(id){$(id).classList.add('show')} function closeModal(id){$(id).classList.remove('show')}
 function currentUser(){if(!state.session)return null;return state.session.role==='CUSTOMER'?state.customers.find(x=>x.id===state.session.id):state.drivers.find(x=>x.id===state.session.id)}
