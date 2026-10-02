@@ -370,6 +370,7 @@ function openPasswordLogin(role,mode='PHONE'){
 let selectedAccountRole='';
 let authIntent='BOTH';
 let passwordRecoveryOtpPending=false;
+let authFlowStage='IDLE';
 
 /* Separate, direct authentication flows.
    LOGIN, CREATE ACCOUNT and FORGOT PASSWORD never share a role-selection step or state. */
@@ -410,6 +411,7 @@ function openRoleChooser(intent='BOTH'){
   if(state.session){toast('You are already logged in');return}
   closeSide();
   authIntent=intent||'BOTH';
+  authFlowStage='LOGIN';
   selectedAccountRole='';
   openModal('authModal');
   if(authIntent==='SIGNUP') authRoleCards('SIGNUP');
@@ -425,6 +427,7 @@ function chooseRole(role){
   }
 }
 function startAccountSignup(role){
+  authFlowStage='SIGNUP';
   setAuthFlow((role==='DRIVER'?'Driver':'Customer')+' • Create Account','Gmail verification is required before password setup.');
   $('authForm').innerHTML='<div class="stack">'+
     '<div class="success">New '+(role==='DRIVER'?'Driver':'Customer')+' account</div>'+
@@ -491,6 +494,7 @@ function openForgotPassword(){
   if(state.session){toast('You are already logged in');return}
   closeSide();openModal('authModal');
   passwordRecoveryOtpPending=false;
+  authFlowStage='RECOVERY';
   setAuthFlow('Forgot Password','This flow is separate from Login and Create Account.');
   $('authForm').innerHTML='<div class="stack"><div class="notice"><b>🔑 Reset your password</b><br>Enter the Gmail/email linked to your Assam Drive account. We will send a one-time OTP.</div><div class="field"><label>Gmail / Email address</label><input id="recoveryEmail" type="email" autocomplete="email" placeholder="you@gmail.com"></div><button class="primary" type="button" onclick="sendPasswordReset()">📩 Send OTP</button><button class="ghost" type="button" onclick="openRoleChooser('LOGIN')">← Back to Login</button></div>';
 }
@@ -499,6 +503,7 @@ async function sendPasswordReset(){
   const email=($('recoveryEmail')?.value||'').trim().toLowerCase();
   if(!/^\\S+@\\S+\\.\\S+$/.test(email)){toast('Enter a valid Gmail/email address');return}
   passwordRecoveryOtpPending=true;
+  authFlowStage='RECOVERY';
   localStorage.setItem('assam_drive_password_recovery','1');
   const {error}=await supabase.auth.signInWithOtp({email,options:{shouldCreateUser:false}});
   if(error){passwordRecoveryOtpPending=false;localStorage.removeItem('assam_drive_password_recovery');toast(error.message);return}
@@ -528,7 +533,7 @@ async function finishPasswordRecovery(){
   if(p!==q){toast('Passwords do not match');return}
   const {error}=await supabase.auth.updateUser({password:p});
   if(error){toast(error.message);return}
-  passwordRecoveryOtpPending=false;localStorage.removeItem('assam_drive_password_recovery');
+  passwordRecoveryOtpPending=false;authFlowStage='IDLE';localStorage.removeItem('assam_drive_password_recovery');
   await supabase.auth.signOut();state.session=null;render();
   setAuthFlow('Password Updated','Your password has been changed successfully.');
   $('authForm').innerHTML='<div class="stack"><div class="success">Password updated successfully ✓</div><div class="notice">Sign in with your Gmail and new password.</div><button class="primary" type="button" onclick="openRoleChooser(\'LOGIN\')">🔐 Back to Login</button></div>';
@@ -768,7 +773,11 @@ async function initSupabaseAuth(){
     supabase.auth.onAuthStateChange((event,session)=>{
       if(event==='PASSWORD_RECOVERY'){showPasswordRecovery();return}
       if(session?.user){
-        if(localStorage.getItem('assam_drive_password_recovery')==='1' || passwordRecoveryOtpPending){
+        if(authFlowStage==='SIGNUP'){
+          /* Signup is intentionally not logged into the app until password setup finishes. */
+          return;
+        }
+        if(authFlowStage==='RECOVERY' || localStorage.getItem('assam_drive_password_recovery')==='1' || passwordRecoveryOtpPending){
           passwordRecoveryOtpPending=true;
           showPasswordRecovery();
           return;
