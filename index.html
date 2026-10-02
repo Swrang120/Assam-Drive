@@ -117,9 +117,9 @@ body.login-screen .login-gate{min-height:100dvh;background:
   <div class="login-title">Welcome</div>
   <div class="login-subtitle">Safe, simple rides across Assam.</div>
   <div class="login-actions premium-actions">
-    <button type="button" class="primary login-main-btn" id="loginStartBtn">🔐 Sign In</button>
-    <button type="button" class="create-account-btn login-main-btn" id="createAccountBtn">✨ Sign Up / Create Account</button>
-    <button type="button" class="login-link-btn" id="forgotPasswordBtn">Forgot Password?</button>
+    <button type="button" class="primary login-main-btn" id="loginStartBtn" onclick="openRoleChooser('LOGIN')">🔐 Sign In</button>
+    <button type="button" class="create-account-btn login-main-btn" id="createAccountBtn" onclick="openRoleChooser('SIGNUP')">✨ Sign Up / Create Account</button>
+    <button type="button" class="login-link-btn" id="forgotPasswordBtn" onclick="openForgotPassword()">Forgot Password?</button>
   </div>
   <div class="login-note"><span>●</span> Customer & Driver accounts are separate</div>
   <div class="login-terms">By continuing, you agree to Assam Drive's<br><u>Terms of Service</u> and <u>Privacy Policy</u></div>
@@ -184,8 +184,8 @@ body.login-screen .login-gate{min-height:100dvh;background:
 <div class="modal auth-modal-fixed" id="authModal"><div class="modalbox stack">
 <div class="row between"><h2>Assam Drive account</h2><button type="button" class="ghost" id="authModalClose" onclick="event.preventDefault();event.stopPropagation();var m=document.getElementById('authModal');m.classList.remove('show');m.style.display='none';m.style.pointerEvents='none'">✕</button></div>
 <div class="role" id="accountRoleChooser">
-<button type="button" id="roleCustomerBtn" class="role-entry customer-entry">👤<br><b>Customer</b><br><span class="small muted">Book rides & manage trips</span></button>
-<button type="button" id="roleDriverBtn" class="role-entry driver-entry">🚗<br><b>Driver</b><br><span class="small muted">Register, verify & drive</span></button>
+<button type="button" id="roleCustomerBtn" class="role-entry customer-entry" onclick="chooseRole('CUSTOMER')">👤<br><b>Customer</b><br><span class="small muted">Book rides & manage trips</span></button>
+<button type="button" id="roleDriverBtn" class="role-entry driver-entry" onclick="chooseRole('DRIVER')">🚗<br><b>Driver</b><br><span class="small muted">Register, verify & drive</span></button>
 </div>
 <div class="small muted" style="text-align:center">Choose your account type. Customer and Driver have separate registration, login and dashboards.</div>
 <div id="authForm"></div>
@@ -554,20 +554,12 @@ function completeRide(){const r=activeRide();if(!r||r.status!=='RIDE_STARTED')re
 function sos(){toast('SOS event logged. Connect emergency call/contacts before production launch.')}
 $('splashRetry')?.addEventListener('click',()=>location.reload());
 $('authBtn').onclick=()=>openRoleChooser();
-$('loginStartBtn')?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();openRoleChooser('LOGIN')});
-$('createAccountBtn')?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();openRoleChooser('SIGNUP')});
-$('forgotPasswordBtn')?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();openForgotPassword()});
 
 /* Harden auth modal touch/click handling: keep the side-menu backdrop behind the modal. */
 const authModal=$('authModal');
 const authModalClose=$('authModalClose');
-authModalClose?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();closeModal('authModal')},true);
-$('roleCustomerBtn')?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();chooseRole('CUSTOMER')},true);
-$('roleDriverBtn')?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();chooseRole('DRIVER')},true);
 authModal?.addEventListener('click',e=>{if(e.target===authModal)closeModal('authModal')},true);
 
-$('createAccountBtn')?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();openRoleChooser('SIGNUP')},{capture:true});
-$('createAccountBtn')?.addEventListener('touchend',e=>{e.preventDefault();e.stopPropagation();openRoleChooser('SIGNUP')},{capture:true,passive:false});
 $('menuBtn')?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();openSide()});
 $('sideClose')?.addEventListener('click',e=>{e.preventDefault();closeSide()});
 $('sideback')?.addEventListener('click',e=>{e.preventDefault();closeSide()});
