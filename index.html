@@ -108,7 +108,7 @@ body.login-screen .login-gate{min-height:100dvh;background:#070707;color:#fff;di
 <button class="login-otp" id="loginGateOtp" type="button">GET EMAIL OTP</button>
 <div class="login-status" id="loginGateStatus"></div>
 <div class="small" style="color:#77737d;margin-top:6px">Email OTP is enabled for free testing. Mobile SMS OTP will be activated later when an SMS provider is connected.</div>
-<div class="login-actions"><button type="button" class="secondary" onclick="openPasswordLogin('CUSTOMER','EMAIL')">🔐 Login with Password</button><button type="button" class="ghost" onclick="openModal('authModal');chooseRole('CUSTOMER');gateSetStatus('Create your account with OTP, then set a password.',true)">🆕 Create Account</button></div><div class="login-or">OR CONTINUE WITH</div>
+<div class="login-actions"><button type="button" class="secondary" id="loginPasswordBtn">🔐 Login with Password</button><button type="button" class="ghost" id="createAccountBtn">🆕 Create Account</button></div><div class="login-or">OR CONTINUE WITH</div>
 <div class="login-alt">
 <button type="button" onclick="gateGoogleLogin()">G <span>Google</span></button>
 <button type="button" onclick="gateEmailLogin()">✉ <span>Email</span></button>
@@ -240,7 +240,7 @@ async function syncCurrentUserToSupabase(){
 }
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){console.warn('Local save failed',e)}render();syncCurrentUserToSupabase()};
 function toast(x){const t=$('toast');t.textContent=x;t.style.display='block';clearTimeout(window.__toast);window.__toast=setTimeout(()=>t.style.display='none',2300)}
-function openModal(id){const el=$(id);if(el)el.classList.add('show')} function closeModal(id){const el=$(id);if(el)el.classList.remove('show')}
+function openModal(id){const el=$(id);if(!el)return;el.classList.add('show');el.style.display='flex';el.style.pointerEvents='auto';} function closeModal(id){const el=$(id);if(!el)return;el.classList.remove('show');el.style.display='none';el.style.pointerEvents='none';}
 function openSide(){ $('sidemenu')?.classList.add('show'); $('sideback')?.classList.add('show') }
 function closeSide(){ $('sidemenu')?.classList.remove('show'); $('sideback')?.classList.remove('show') }
 function showInfo(title,body){$('authForm').innerHTML='<div class="stack"><h3>'+esc(title)+'</h3><div class="notice">'+body+'</div><button class="secondary" onclick="closeModal(\'authModal\')">Close</button></div>';openModal('authModal')}
@@ -422,6 +422,8 @@ function sos(){toast('SOS event logged. Connect emergency call/contacts before p
 $('loginGateOtp').onclick=gateSendOtp;
 $('loginGateEmail').addEventListener('input',()=>{const email=$('loginGateEmail').value.trim();$('loginGateOtp').classList.toggle('ready',/^\S+@\S+\.\S+$/.test(email));});
 $('authBtn').onclick=()=>{openModal('authModal');chooseRole(state.session?.role||'CUSTOMER')};
+$('loginPasswordBtn')?.addEventListener('click',()=>{openModal('authModal');openPasswordLogin('CUSTOMER','EMAIL')});
+$('createAccountBtn')?.addEventListener('click',(e)=>{e.preventDefault();e.stopPropagation();openModal('authModal');chooseRole('CUSTOMER');gateSetStatus('Create your account with Name, mobile number, Gmail OTP and password.',true)});
 $('menuBtn')?.addEventListener('click',openSide);
 $('sideClose')?.addEventListener('click',closeSide);
 $('sideback')?.addEventListener('click',closeSide);
