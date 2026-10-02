@@ -20,13 +20,26 @@ h1,h2,h3{margin:0 0 8px}h1{font-size:27px}h2{font-size:20px}h3{font-size:16px}.m
 .ride{border:1px solid var(--line);border-radius:14px;padding:13px}.ride+.ride{margin-top:9px}.ride-title{display:flex;justify-content:space-between;gap:8px}.avatar{width:62px;height:62px;border-radius:50%;object-fit:cover;background:#e9f1ed;border:2px solid #fff;box-shadow:0 2px 8px #0002}.doc{border:1px dashed #b9c9c2;border-radius:12px;padding:12px;background:#fafcfb}.modal{position:fixed;inset:0;background:#10241db8;z-index:50;display:none;align-items:center;justify-content:center;padding:14px}.modal.show{display:flex}.modalbox{width:min(620px,100%);max-height:92vh;overflow:auto;background:#fff;border-radius:22px;padding:18px}.role{display:grid;grid-template-columns:1fr 1fr;gap:12px}.role button{padding:18px;border:1px solid var(--line);border-radius:15px;background:#fff;font-weight:800}.role button:hover{border-color:var(--g)}.tabs{display:flex;gap:7px;overflow:auto;margin-bottom:12px}.tab{white-space:nowrap;padding:9px 12px;border-radius:10px;background:#edf3f0;font-weight:700}.tab.active{background:var(--g);color:#fff}.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#17211d;color:#fff;padding:12px 16px;border-radius:12px;display:none;z-index:80;box-shadow:0 8px 28px #0004}
 .idcard{border:2px solid var(--g);border-radius:18px;padding:16px;background:linear-gradient(145deg,#fff,#eef9f4)}.idcard .idnum{font-size:20px;font-weight:900;letter-spacing:1px;color:var(--g)}
 @media(max-width:760px){main{padding:11px}.span3,.span4,.span6,.span8{grid-column:span 12}header{align-items:flex-start;flex-direction:column}nav{width:100%}.navbtn{flex:1}.map{height:250px}.vehicle span{padding:10px 4px;font-size:13px}.role{grid-template-columns:1fr}}
-</style>
+
+/* Premium side menu + interaction safety */
+.menuBtn{display:none;background:#edf3f0;color:#087a52;padding:10px 12px;border-radius:12px;font-size:20px}
+.sideback{position:fixed;inset:0;background:#10241d80;z-index:89;display:none}
+.sideback.show{display:block}
+.sidemenu{position:fixed;top:0;right:0;height:100dvh;width:min(360px,92vw);background:#fff;z-index:90;box-shadow:-18px 0 45px #10241d30;transform:translateX(105%);transition:.22s;overflow:auto;padding:18px}
+.sidemenu.show{transform:translateX(0)}
+.sidehead{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-bottom:14px;border-bottom:1px solid var(--line)}
+.sidebrand{display:flex;align-items:center;gap:10px;font-weight:850}.sideicon{width:44px;height:44px;border-radius:14px;background:linear-gradient(135deg,var(--g),var(--g2));display:grid;place-items:center;color:#fff;font-size:22px}
+.sideitem{display:flex;align-items:center;gap:12px;width:100%;padding:13px 12px;margin-top:8px;border:1px solid var(--line);border-radius:13px;background:#fff;text-align:left;font-weight:750;color:var(--text)}
+.sideitem:hover{border-color:var(--g);background:#f0f9f5}.sideitem span:first-child{font-size:19px}.sidefoot{margin-top:18px;padding:13px;border-radius:14px;background:#f4f8f6}
+.click-debug{position:fixed;left:10px;bottom:10px;z-index:95;padding:7px 10px;border-radius:9px;background:#17211d;color:#fff;font-size:11px;display:none}
+@media(max-width:760px){.menuBtn{display:block}header nav{display:none}}
+
 </head>
 <body>
 <div class="app">
 <header>
 <div class="brand"><div class="logo">🚗</div><div>Assam Drive<div class="small muted">Ride booking • Assam</div></div></div>
-<nav>
+<button class="menuBtn" id="menuBtn" aria-label="Open menu">☰</button><nav>
 <button class="navbtn active" data-view="customer">Customer</button>
 <button class="navbtn" data-view="driver">Driver</button>
 <button class="navbtn" data-view="admin">Admin</button>
@@ -34,6 +47,20 @@ h1,h2,h3{margin:0 0 8px}h1{font-size:27px}h2{font-size:20px}h3{font-size:16px}.m
 <button class="navbtn" id="logoutBtn" style="display:none">Logout</button>
 </nav>
 </header>
+<div class="sideback" id="sideback"></div>
+<aside class="sidemenu" id="sidemenu" aria-label="Assam Drive menu">
+  <div class="sidehead"><div class="sidebrand"><div class="sideicon">🚗</div><div>Assam Drive<div class="small muted">Premium ride support</div></div></div><button class="ghost" id="sideClose">✕</button></div>
+  <button class="sideitem" data-side="customer"><span>🏠</span><span>Customer Home</span></button>
+  <button class="sideitem" data-side="driver"><span>🚗</span><span>Driver Partner</span></button>
+  <button class="sideitem" data-side="admin"><span>🛡️</span><span>Admin</span></button>
+  <button class="sideitem" id="sideProfile"><span>👤</span><span>My Profile</span></button>
+  <button class="sideitem" id="sidePrivacy"><span>🔒</span><span>Privacy Policy</span></button>
+  <button class="sideitem" id="sideAbout"><span>ℹ️</span><span>About Assam Drive</span></button>
+  <button class="sideitem" id="sideTerms"><span>📄</span><span>Terms & Conditions</span></button>
+  <button class="sideitem" id="sideCare"><span>💬</span><span>Customer Care</span></button>
+  <button class="sideitem" id="sideAI"><span>🤖</span><span>AI Customer Support</span></button>
+  <div class="sidefoot"><b>Customer Support</b><div class="small muted" style="margin-top:4px">assamridesupport@gmail.com</div><button class="secondary" id="emailSupport" style="margin-top:10px;width:100%">✉️ Email support</button></div>
+</aside>
 <main>
 <section id="customer" class="view active">
 <div class="hero"><h1>Book a ride in Assam</h1><p>Register with mobile OTP, choose Bike / Auto / Car and pay according to the actual trip distance.</p></div>
@@ -122,7 +149,7 @@ h1,h2,h3{margin:0 0 8px}h1{font-size:27px}h2{font-size:20px}h3{font-size:16px}.m
 <div class="field"><label>Name</label><input id="profileName"></div><div class="field"><label>Phone</label><input id="profilePhone" inputmode="tel"></div><div class="field"><label>Profile photo</label><input id="profilePhoto" type="file" accept="image/*"></div>
 <button class="primary" onclick="saveProfile()">Save profile</button><div class="small muted">Customer can update name/photo later. Production backend should audit sensitive phone-number changes.</div>
 </div></div>
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast"></div><div class="click-debug" id="clickDebug">Assam Drive ready</div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
@@ -149,9 +176,12 @@ state.drivers.forEach(d=>{d.documents=Array.isArray(d.documents)?d.documents:[];
 const $=id=>document.getElementById(id);
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){console.warn('Local save failed',e)}render()};
 function toast(x){const t=$('toast');t.textContent=x;t.style.display='block';clearTimeout(window.__toast);window.__toast=setTimeout(()=>t.style.display='none',2300)}
-function openModal(id){$(id).classList.add('show')} function closeModal(id){$(id).classList.remove('show')}
+function openModal(id){const el=$(id);if(el)el.classList.add('show')} function closeModal(id){const el=$(id);if(el)el.classList.remove('show')}
+function openSide(){ $('sidemenu')?.classList.add('show'); $('sideback')?.classList.add('show') }
+function closeSide(){ $('sidemenu')?.classList.remove('show'); $('sideback')?.classList.remove('show') }
+function showInfo(title,body){$('authForm').innerHTML='<div class="stack"><h3>'+esc(title)+'</h3><div class="notice">'+body+'</div><button class="secondary" onclick="closeModal(\'authModal\')">Close</button></div>';openModal('authModal')}
 function currentUser(){if(!state.session)return null;return state.session.role==='CUSTOMER'?state.customers.find(x=>x.id===state.session.id):state.drivers.find(x=>x.id===state.session.id)}
-function vehicle(){return document.querySelector('input[name=vehicle]:checked').value}
+function vehicle(){const el=document.querySelector('input[name=vehicle]:checked');return el?el.value:'BIKE'}
 function activeRide(){return state.rides.find(r=>['SEARCHING','DRIVER_ASSIGNED','OTP_PENDING','RIDE_STARTED'].includes(r.status))}
 function estimate(){const v=vehicle(),km=Math.max(.1,+$('distance').value||0),mins=Math.max(1,+$('minutes').value||1),f=state.fare[v];return Math.max(f.base+km*f.km,v==='BIKE'?40:v==='AUTO'?60:100)}
 function renderFare(){$('fare').textContent='₹'+Math.round(estimate());$('routeText').textContent='Estimated distance: '+(+($('distance').value||0)).toFixed(1)+' km • '+(+($('minutes').value||0))+' min';$('bikeRateLabel').textContent='₹'+state.fare.BIKE.km+'/km';$('autoRateLabel').textContent='₹'+state.fare.AUTO.km+'/km';$('carRateLabel').textContent='₹'+state.fare.CAR.km+'/km'}
@@ -192,7 +222,19 @@ function rejectRide(){const r=state.rides.find(x=>x.status==='SEARCHING');if(!r)
 function verifyOtp(){const r=state.rides.find(x=>x.driverId===state.session.id&&x.status==='OTP_PENDING');if(!r)return;const val=($('otpInput').value||'').replace(/\D/g,'');if(val===r.otp){r.status='RIDE_STARTED';r.otp=null;save();toast('OTP verified — ride started')}else{r.otpAttempts++;if(r.otpAttempts>=2){r.status='CANCELLED';r.otp=null;save();toast('Ride cancelled after 2 wrong OTP attempts')}else{save();toast('Wrong OTP — 1 attempt remaining')}}}
 function completeRide(){const r=activeRide();if(!r||r.status!=='RIDE_STARTED')return;r.status='COMPLETED';const d=state.drivers.find(x=>x.id===r.driverId);if(d)d.earn+=r.fare;save();toast('Ride completed')}
 function sos(){toast('SOS event logged. Connect emergency call/contacts before production launch.')}
-$('authBtn').onclick=()=>openModal('authModal');$('logoutBtn').onclick=async()=>{if(supabase)await supabase.auth.signOut();state.session=null;state.drivers.forEach(d=>d.online=false);save();toast('Logged out')};
+$('authBtn').onclick=()=>{openModal('authModal');chooseRole(state.session?.role||'CUSTOMER')};
+$('menuBtn')?.addEventListener('click',openSide);
+$('sideClose')?.addEventListener('click',closeSide);
+$('sideback')?.addEventListener('click',closeSide);
+document.querySelectorAll('[data-side]').forEach(b=>b.addEventListener('click',()=>{const v=b.dataset.side;document.querySelectorAll('.navbtn[data-view]').forEach(x=>{x.classList.toggle('active',x.dataset.view===v)});document.querySelectorAll('.view').forEach(x=>x.classList.toggle('active',x.id===v));closeSide()}));
+$('sideProfile')?.addEventListener('click',()=>{closeSide();if(currentUser()){editProfile()}else{openModal('authModal');chooseRole('CUSTOMER')}});
+$('sidePrivacy')?.addEventListener('click',()=>{closeSide();showInfo('Privacy Policy','Assam Drive uses account, ride and location information only for providing the ride service, safety, support and required operations. Location sharing is limited to the active ride. Do not upload documents unless required for verification.')});
+$('sideAbout')?.addEventListener('click',()=>{closeSide();showInfo('About Assam Drive','Assam Drive is a ride-booking platform concept for customers and verified driver partners across Assam, with customer, driver and admin workflows.')});
+$('sideTerms')?.addEventListener('click',()=>{closeSide();showInfo('Terms & Conditions','Customers and drivers must provide accurate information and follow applicable transport, safety and payment rules. Driver approval does not replace any government licence, permit, insurance or other legal requirement.')});
+$('sideCare')?.addEventListener('click',()=>{closeSide();showInfo('Customer Care','For help with account, booking, payment or ride issues, contact <b>assamridesupport@gmail.com</b>.')});
+$('sideAI')?.addEventListener('click',()=>{closeSide();showInfo('AI Customer Support','AI support can help with common booking, account and app questions. For payment disputes, safety matters or sensitive account issues, contact customer support directly.')});
+$('emailSupport')?.addEventListener('click',()=>{location.href='mailto:assamridesupport@gmail.com?subject=Assam%20Drive%20Customer%20Support'});
+$('logoutBtn').onclick=async()=>{if(supabase)await supabase.auth.signOut();state.session=null;state.drivers.forEach(d=>d.online=false);save();toast('Logged out')};
 $('driverRegisterBtn').onclick=()=>{if(!state.session||state.session.role!=='DRIVER'){openModal('authModal');chooseRole('DRIVER');toast('Login/register as Driver first')}else{const d=currentUser();$('regName').value=d.name;$('regPhone').value=d.phone;$('regVehicle').value=d.vehicle;$('regRc').value=d.registration;openModal('driverModal')}};
 $('onlineBtn').onclick=()=>{const d=currentUser();if(!d||state.session.role!=='DRIVER'){openModal('authModal');chooseRole('DRIVER');return}if(d.verification!=='APPROVED'){toast('Admin approval is required before going online');return}d.online=!d.online;save();toast(d.online?'Driver is online':'Driver is offline')};
 $('bookBtn').onclick=book;$('locBtn').onclick=()=>{if(!navigator.geolocation){toast('Location not supported');return}navigator.geolocation.getCurrentPosition(p=>toast('Location received. Maps backend will use it for route matching.'),()=>toast('Location permission not granted'))};
@@ -200,8 +242,11 @@ $('bookBtn').onclick=book;$('locBtn').onclick=()=>{if(!navigator.geolocation){to
 $('saveFare').onclick=()=>{state.fare.BIKE.km=+$('bikeRate').value||10;state.fare.AUTO.km=+$('autoRate').value||14;state.fare.CAR.km=+$('carRate').value||18;save();toast('Fare settings saved')};
 document.querySelectorAll('.navbtn[data-view]').forEach(b=>b.onclick=()=>{document.querySelectorAll('.navbtn').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));$(b.dataset.view).classList.add('active')});
 async function initSupabaseAuth(){if(!supabaseReady||!supabase){render();return}const {data}=await supabase.auth.getSession();if(data.session?.user){const role=data.session.user.user_metadata?.requested_role||state.session?.role||'CUSTOMER';await establishSupabaseUser(role,data.session.user)}supabase.auth.onAuthStateChange((event,session)=>{if(session?.user&&!state.session){const role=session.user.user_metadata?.requested_role||'CUSTOMER';establishSupabaseUser(role,session.user).then(()=>render())}else if(!session){state.session=null;render()}});render()}
-initSupabaseAuth();window.addEventListener('error',e=>{console.error(e.error||e.message)});
-if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});
+initSupabaseAuth();window.addEventListener('error',e=>{console.error(e.error||e.message);const d=$('clickDebug');if(d){d.textContent='App error: '+(e.message||'Unknown error');d.style.display='block';d.style.background='#a61e1e'}});
+window.addEventListener('unhandledrejection',e=>{console.error(e.reason);const d=$('clickDebug');if(d){d.textContent='App error: '+(e.reason?.message||'Promise error');d.style.display='block';d.style.background='#a61e1e'}});
+document.addEventListener('click',e=>{const b=e.target.closest('button');if(b&&!b.disabled){console.debug('Assam Drive click:',b.textContent.trim()||b.id)}},true);
+
+if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>r.unregister())).catch(()=>{});}
 </script>
 </body>
 </html>
