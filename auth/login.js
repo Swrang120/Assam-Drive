@@ -1,24 +1,50 @@
-/* Assam Drive Login bridge */
-/* Assam Drive auth click bridge — keeps mobile auth buttons callable even if inline handlers are restricted. */
-window.assamDriveAuth=function(intent){
-  try{
-    const m=document.getElementById('authModal');
-    if(m){m.classList.add('show');m.style.display='flex';m.style.pointerEvents='auto';m.setAttribute('aria-hidden','false');}
-    if(typeof window.openRoleChooser==='function') return window.openRoleChooser(intent||'LOGIN');
-    if(typeof openRoleChooser==='function') return openRoleChooser(intent||'LOGIN');
-    const s=document.getElementById('loginGateStatus');
-    if(s)s.textContent='Login module is still starting. Please tap again.';
-  }catch(e){
-    console.error('Auth button error:',e);
-    const s=document.getElementById('loginGateStatus');
-    if(s)s.textContent='Please try again. '+(e?.message||'Authentication module error');
+/* Assam Drive Login — isolated, reliable mobile click controller */
+(function(){
+  function run(fn){
+    try{ fn(); }catch(e){
+      console.error('Assam Drive auth:',e);
+      const s=document.getElementById('loginGateStatus');
+      if(s)s.textContent='Please try again.';
+    }
   }
-};
-window.assamDriveForgotPassword=function(){
-  try{
-    if(typeof window.openForgotPassword==='function') return window.openForgotPassword();
-    if(typeof openForgotPassword==='function') return openForgotPassword();
-  }catch(e){
-    console.error('Forgot password error:',e);
+  function login(){
+    run(function(){
+      if(typeof window.openRoleChooser==='function') window.openRoleChooser('LOGIN');
+      else {
+        const m=document.getElementById('authModal');
+        if(m){m.classList.add('show');m.style.display='flex';m.style.pointerEvents='auto';}
+      }
+    });
   }
-};
+  function signup(){run(function(){
+    if(typeof window.openRoleChooser==='function') window.openRoleChooser('SIGNUP');
+  });}
+  function forgot(){run(function(){
+    if(typeof window.openForgotPassword==='function') window.openForgotPassword();
+  });}
+  window.AssamDriveAuth={open:login};
+  window.AssamDriveCreateAccount={open:signup};
+  window.AssamDriveRecovery={open:forgot};
+
+  function bind(){
+    const map=[
+      ['loginStartBtn',login],
+      ['createAccountBtn',signup],
+      ['forgotPasswordBtn',forgot]
+    ];
+    map.forEach(function(pair){
+      const el=document.getElementById(pair[0]);
+      if(!el||el.dataset.assamAuthClick==='1')return;
+      el.dataset.assamAuthClick='1';
+      el.removeAttribute('onclick');
+      el.addEventListener('click',function(e){
+        e.preventDefault(); e.stopPropagation(); run(pair[1]);
+      },false);
+      el.addEventListener('touchend',function(e){
+        e.preventDefault(); e.stopPropagation(); run(pair[1]);
+      },{passive:false});
+    });
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',bind);
+  else bind();
+})();
