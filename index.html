@@ -47,18 +47,29 @@ h1,h2,h3{margin:0 0 8px}h1{font-size:27px}h2{font-size:20px}h3{font-size:16px}.m
 @media(max-width:760px){.menuBtn{display:block}header nav{display:none}}
 
 .google-map-pin{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:#087a52;color:#fff;border:3px solid #fff;box-shadow:0 3px 12px #0004}.map-error{padding:14px;text-align:center;background:#fff5db;color:#795b00;height:100%;display:grid;place-items:center}
-/* Branded login screen */
-body.login-screen{background:#070707;color:#fff}
-body.login-screen header,body.login-screen .menuBtn,body.login-screen .sideback,body.login-screen .sidemenu{display:none!important;pointer-events:none!important}
-body.authenticated header{display:flex}
-body.authenticated .menuBtn{display:none}
-@media(max-width:760px){
-  body.authenticated .menuBtn{display:block}
-  body.authenticated header nav{display:none}
-}
-#authModal{z-index:2147483646!important}
-#authModal .modalbox{z-index:2147483647!important}
+.assam-splash{position:fixed;inset:0;z-index:2147483647;background:#06100c;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;transition:opacity .35s ease,visibility .35s ease}.assam-splash.hide{opacity:0;visibility:hidden;pointer-events:none}.splash-mark{width:86px;height:86px;border-radius:25px;background:#fff;padding:4px;box-shadow:0 0 0 1px #10a66c55,0 18px 55px #0008;animation:splashPulse 1.1s ease-in-out infinite}.splash-mark img{width:100%;height:100%;object-fit:contain;border-radius:21px}.splash-name{margin-top:18px;font-size:26px;font-weight:900;letter-spacing:-.5px;background:linear-gradient(100deg,#0b8b5d,#25c986,#d9a441);-webkit-background-clip:text;background-clip:text;color:transparent}.splash-line{font-size:9px;letter-spacing:2.4px;color:#80988d;font-weight:800;margin-top:5px}.splash-loader{width:120px;height:3px;background:#ffffff12;border-radius:9px;margin-top:28px;overflow:hidden}.splash-loader span{display:block;height:100%;width:45%;background:linear-gradient(90deg,#087a52,#d9a441);border-radius:9px;animation:splashLoad 1s ease-in-out infinite}@keyframes splashPulse{50%{transform:scale(1.035);box-shadow:0 0 0 1px #10a66c77,0 20px 65px #0009}}@keyframes splashLoad{0%{transform:translateX(-110%)}100%{transform:translateX(280%)}}/* Branded login screen */
+body.login-screen{background:#07120e;color:#fff}
 body.login-screen main{padding:0}
+body.login-screen .login-gate{min-height:100dvh;background:
+ radial-gradient(circle at 50% 22%,#0d7d5426 0,transparent 30%),
+ linear-gradient(160deg,#050908 0%,#07140f 52%,#040806 100%);
+ color:#fff;display:flex;align-items:center;justify-content:center;padding:28px 20px;overflow:hidden}
+.login-panel{width:min(420px,100%);display:flex;flex-direction:column;align-items:center;text-align:center;position:relative}
+.login-glow{position:absolute;width:230px;height:230px;border-radius:50%;background:#0aa86b18;filter:blur(42px);top:15px;z-index:0;pointer-events:none}
+.login-logo{position:relative;z-index:1;width:104px;height:104px;object-fit:contain;padding:5px;border-radius:30px;background:linear-gradient(#fff,#f5fbf8) padding-box,#087a52 border-box;border:2px solid transparent;box-shadow:0 18px 55px #0009,0 0 0 5px #087a5218;margin-bottom:18px}
+.login-brand{position:relative;z-index:1;font-size:31px;font-weight:900;letter-spacing:-1px;background:linear-gradient(100deg,#0b8b5d,#25c986,#d9a441);-webkit-background-clip:text;background-clip:text;color:transparent}
+.login-tagline{font-size:10px;letter-spacing:2.8px;color:#8ca99d;font-weight:800;margin-top:6px}
+.login-title{font-size:25px;font-weight:800;margin-top:38px;margin-bottom:7px}
+.login-subtitle{color:#8e9c96;font-size:14px;margin-bottom:22px}
+.premium-actions{width:100%;display:grid;gap:11px}
+.login-main-btn{width:100%;min-height:54px;border-radius:16px;font-size:16px;font-weight:850;touch-action:manipulation}
+.login-main-btn.primary{background:linear-gradient(135deg,#087a52,#10a66c);box-shadow:0 12px 30px #087a5238}
+.login-main-btn.create-account-btn{background:#ffffff0b;color:#fff;border:1px solid #ffffff20;box-shadow:0 8px 25px #0003}
+.login-main-btn.create-account-btn:hover{background:#ffffff12;border-color:#087a52}
+.login-note{margin-top:20px;color:#6f8179;font-size:11px}.login-note span{color:#10a66c;margin-right:5px}
+.login-terms{margin-top:25px;color:#56645e;font-size:10px;line-height:1.6}
+.login-status{margin-top:10px;font-size:12px;color:#ffb5b5}
+@media(max-width:760px){body.login-screen .login-gate{padding:24px 18px}.login-logo{width:92px;height:92px}.login-brand{font-size:28px}.login-title{margin-top:32px}}
 /* Never allow the authenticated app side-menu overlay to cover the public login screen. */
 body.login-screen .sidemenu,body.login-screen .sideback{display:none!important;pointer-events:none!important}
 body.login-screen .login-gate{min-height:100dvh;background:#070707;color:#fff;display:flex;align-items:center;justify-content:center;padding:28px 22px}
@@ -85,7 +96,12 @@ body.login-screen .login-gate{min-height:100dvh;background:#070707;color:#fff;di
 </style>
 </head>
 <body>
-<div class="app">
+<div class="app"><div id="assamSplash" class="assam-splash" aria-label="Assam Drive loading">
+  <div class="splash-mark"><img src="./assets/assam-drive-logo.jpg" alt=""></div>
+  <div class="splash-name">Assam Drive</div>
+  <div class="splash-line">YOUR RIDE • OUR ASSAM</div>
+  <div class="splash-loader"><span></span></div>
+</div>
 <header>
 <div class="brand"><img class="logo" src="./assets/assam-drive-logo.jpg" alt="Assam Drive logo"><div>Assam Drive<div class="small muted">Ride booking • Assam</div></div></div>
 <button hidden type="button" class="menuBtn" id="menuBtn" aria-label="Open menu">☰</button><nav>
@@ -111,20 +127,19 @@ body.login-screen .login-gate{min-height:100dvh;background:#070707;color:#fff;di
 <main>
 <section id="loginGate" class="view active login-gate">
 <div class="login-panel">
-<img class="login-logo" src="./assets/assam-drive-logo.jpg" alt="Assam Drive">
-<div class="login-brand">Assam Drive</div>
-<div class="login-title">Get Started</div>
-<div class="login-phone" style="grid-template-columns:1fr"><input id="loginGateEmail" type="email" autocomplete="email" placeholder="Enter Gmail / email address"></div>
-<button class="login-otp" id="loginGateOtp" type="button">GET EMAIL OTP</button>
-<div class="login-status" id="loginGateStatus"></div>
-<div class="small" style="color:#77737d;margin-top:6px">Email OTP is enabled for free testing. Mobile SMS OTP will be activated later when an SMS provider is connected.</div>
-<div class="login-actions"><button type="button" class="secondary" id="loginPasswordBtn">🔐 Login with Password</button><button type="button" class="create-account-btn" id="createAccountBtn" onclick="event.preventDefault();event.stopPropagation();window.__openCreateAccount(event)">✨ Create Account</button></div><div class="login-or">OR CONTINUE WITH</div>
-<div class="login-alt">
-<button type="button" onclick="gateGoogleLogin()">G <span>Google</span></button>
-<button type="button" onclick="gateEmailLogin()">✉ <span>Email</span></button>
-</div>
-<div class="login-terms">By continuing, you agree to Assam Drive's<br><u>Terms of Service</u> and <u>Privacy Policy</u></div>
-<button class="login-driver" type="button" onclick="event.preventDefault();event.stopPropagation();document.getElementById('sidemenu')?.classList.remove('show');document.getElementById('sideback')?.classList.remove('show');openModal('authModal');chooseRole('DRIVER')">🚗 Driver Partner Login / Register</button>
+  <div class="login-glow"></div>
+  <img class="login-logo" src="./assets/assam-drive-logo.jpg" alt="Assam Drive">
+  <div class="login-brand">Assam Drive</div>
+  <div class="login-tagline">YOUR RIDE • OUR ASSAM</div>
+  <div class="login-title">Welcome</div>
+  <div class="login-subtitle">Safe, simple rides across Assam.</div>
+  <div class="login-actions premium-actions">
+    <button type="button" class="primary login-main-btn" id="loginStartBtn">🔐 Login</button>
+    <button type="button" class="create-account-btn login-main-btn" id="createAccountBtn">✨ Create Account</button>
+  </div>
+  <div class="login-note"><span>●</span> Customer & Driver accounts are separate</div>
+  <div class="login-terms">By continuing, you agree to Assam Drive's<br><u>Terms of Service</u> and <u>Privacy Policy</u></div>
+  <div class="login-status" id="loginGateStatus"></div>
 </div>
 </section>
 <section id="customer" class="view">
@@ -272,6 +287,7 @@ function applyAuthShell(){
   if(logoutBtn) logoutBtn.hidden=!logged;
 }
 applyAuthShell();
+setTimeout(()=>{$('assamSplash')?.classList.add('hide')},850);
 window.__openCreateAccount=function(e){if(e){e.preventDefault();e.stopPropagation()}try{const sm=$('sidemenu'),sb=$('sideback');sm?.classList.remove('show');sb?.classList.remove('show');sm?.style.setProperty('display','none','important');sb?.style.setProperty('display','none','important');const m=$('authModal');if(m){m.classList.add('show');m.style.display='flex';m.style.pointerEvents='auto';m.setAttribute('aria-hidden','false')}chooseRole('CUSTOMER');gateSetStatus('Create your account with Name, mobile number, Gmail OTP and password.',true)}catch(err){console.error('Create Account error',err);const s=$('loginGateStatus');if(s)s.textContent='Please try again. App error: '+(err?.message||'unknown')}};
 async function syncCurrentUserToSupabase(){
  const u=currentUser();if(!u||!supabaseReady||!supabase)return;
@@ -521,11 +537,9 @@ function rejectRide(){const r=state.rides.find(x=>x.status==='SEARCHING');if(!r)
 function verifyOtp(){const r=state.rides.find(x=>x.driverId===state.session.id&&x.status==='OTP_PENDING');if(!r)return;const val=($('otpInput').value||'').replace(/\D/g,'');if(val===r.otp){r.status='RIDE_STARTED';r.otp=null;save();toast('OTP verified — ride started')}else{r.otpAttempts++;if(r.otpAttempts>=2){r.status='CANCELLED';r.otp=null;save();toast('Ride cancelled after 2 wrong OTP attempts')}else{save();toast('Wrong OTP — 1 attempt remaining')}}}
 function completeRide(){const r=activeRide();if(!r||r.status!=='RIDE_STARTED')return;r.status='COMPLETED';const d=state.drivers.find(x=>x.id===r.driverId);if(d)d.earn+=r.fare;save();toast('Ride completed')}
 function sos(){toast('SOS event logged. Connect emergency call/contacts before production launch.')}
-$('loginGateOtp').onclick=gateSendOtp;
-$('loginGateEmail').addEventListener('input',()=>{const email=$('loginGateEmail').value.trim();$('loginGateOtp').classList.toggle('ready',/^\S+@\S+\.\S+$/.test(email));});
 $('authBtn').onclick=()=>openRoleChooser();
-
-$('loginPasswordBtn')?.addEventListener('click',()=>{openModal('authModal');openPasswordLogin('CUSTOMER','EMAIL')});
+$('loginStartBtn')?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();openRoleChooser()});
+$('createAccountBtn')?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();openRoleChooser()});
 
 /* Harden auth modal touch/click handling: keep the side-menu backdrop behind the modal. */
 const authModal=$('authModal');
