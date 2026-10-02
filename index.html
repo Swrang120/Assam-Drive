@@ -1,33 +1,3 @@
-function rideCustomer(r){
- let h='<div class="stack"><span class="pill '+(r.status==='RIDE_STARTED'?'ok':r.status==='COMPLETED'?'ok':'warn')+'">'+esc(r.status)+'</span><b>'+esc(r.vehicle)+' • '+esc(r.driverName||'Assigned driver')+'</b>';
- if(r.driverId||r.driverPhone)h+='<div class="success"><b>Driver phone: '+esc(r.driverPhone||'Available in active ride')+'</b></div>';
- h+='<span class="muted">'+esc(r.pickup)+' → '+esc(r.destination)+'</span>';
- if(r.status==='OTP_PENDING')h+='<div class="notice">Ride OTP: <b style="font-size:22px;letter-spacing:4px">'+esc(r.otp||'Check notification')+'</b><br><span class="small">Give this OTP to the driver only after reaching the pickup point.</span></div>';
- if(r.status==='RIDE_STARTED')h+='<div class="notice">Live driver location is updating during this ride.</div><button class="danger" onclick="sos()">SOS</button><button class="primary" onclick="completeRide('+r.id+')">Complete ride</button>';
- if(r.status==='COMPLETED'&&r.paymentStatus!=='PAID')h+='<div class="notice">Payment pending</div><div class="row"><button class="secondary" onclick="payRide('+r.id+',\'CASH\')">Cash</button><button class="primary" onclick="payRide('+r.id+',\'UPI\')">UPI</button></div>';
- return h+'</div>'
-}
-function rideRequest(r){return '<div class="ride"><div class="ride-title"><b>New ride #'+r.id+'</b><span class="pill warn">'+r.vehicle+'</span></div><div>'+esc(r.pickup)+' → '+esc(r.destination)+'</div><div class="small muted">Estimated ₹'+r.fare+' • '+r.distance+' km</div><div class="row" style="margin-top:9px"><button class="primary" onclick="acceptRide('+r.id+')">Accept</button><button class="danger" onclick="rejectRide('+r.id+')">Reject</button></div></div>'}
-function rideDriver(r){return '<div class="ride"><b>Ride #'+r.id+'</b><div class="small">'+esc(r.pickup)+' → '+esc(r.destination)+'</div><div style="margin-top:8px"><b>OTP verification</b><div class="row"><input id="otpInput" maxlength="4" inputmode="numeric" placeholder="4-digit OTP" style="padding:10px;border:1px solid var(--line);border-radius:10px;width:150px"><button class="primary" onclick="verifyOtp('+r.id+')">Verify</button></div><div class="small muted">Maximum 2 attempts. Second wrong attempt cancels the ride.</div></div></div>'}
-async function book(){
- if(!state.session||state.session.role!=='CUSTOMER'){openModal('authModal');chooseRole('CUSTOMER');toast('Login/register as Customer first');return}
- if(activeRide()){toast('Finish the current ride first');return}
- try{
-  await calculateGoogleRoute();
-  const p=coordsFromInput('pickup'),d=coordsFromInput('destination');
-  if(!p||!d)throw new Error('Select pickup and destination on the map');
-  const v=vehicle(),km=Math.max(.1,+$('distance').value||0),mins=Math.max(1,+$('minutes').value||1);
-  const r=await dbRpc('create_ride',{p_vehicle:v,p_pickup:$('pickup').value.trim(),p_destination:$('destination').value.trim(),p_pickup_lat:p.lat,p_pickup_lng:p.lng,p_destination_lat:d.lat,p_destination_lng:d.lng,p_distance_km:km,p_duration_minutes:mins});
-  await refreshBackend();
-  toast(r?.driver_id?'Ride assigned to a verified nearby driver':'Ride request created; waiting for a nearby driver');
- }catch(e){console.error(e);toast(e.message||'Could not create ride')}
-}
-async function acceptRide(id){try{await dbRpc('claim_ride',{p_ride_id:id});await refreshBackend();toast('Ride accepted. Customer OTP is now available to the customer.')}catch(e){toast(e.message||'Ride is no longer available')}}
-async function rejectRide(id){try{await dbRpc('cancel_ride',{p_ride_id:id,p_reason:'Driver rejected'});await refreshBackend();toast('Ride rejected')}catch(e){toast(e.message||'Could not reject ride')}}
-async function verifyOtp(id){const val=($('otpInput').value||'').replace(/\D/g,'');if(!/^\d{4}$/.test(val)){toast('Enter the 4-digit OTP');return}try{const r=await dbRpc('verify_ride_otp',{p_ride_id:id,p_otp:val});await refreshBackend();if(r?.status==='CANCELLED')toast('Ride cancelled after 2 wrong OTP attempts');else if(r?.status==='RIDE_STARTED')toast('OTP verified — ride started');}catch(e){toast(e.message||'OTP verification failed')}}
-async function completeRide(id){try{await dbRpc('complete_ride',{p_ride_id:id});await refreshBackend();toast('Ride completed. Select payment method.')}catch(e){toast(e.message||'Could not complete ride')}}
-async function payRide(id,method){try{const status=method==='CASH'?'PAID':'PROCESSING';await dbRpc('record_payment',{p_ride_id:id,p_method:method,p_status:status});await refreshBackend();toast(method==='CASH'?'Cash payment recorded':'UPI/online payment is pending provider confirmation')}catch(e){toast(e.message||'Payment failed')}}
-async function sos(){const r=activeRide();if(!r){toast('No active ride');return}const p=coordsFromInput('pickup');try{await dbRpc('create_sos',{p_ride_id:r.id,p_lat:p?.lat||null,p_lng:p?.lng||null,p_message:'SOS requested from active ride'});toast('SOS recorded and sent to safety system')}catch(e){toast(e.message||'SOS could not be sent')}}
 <!doctype html>
 <html lang="en">
 <head>
@@ -253,7 +223,37 @@ body.login-screen .login-gate{min-height:100dvh;background:
 <div class="toast" id="toast"></div><div class="click-debug" id="clickDebug">Assam Drive ready</div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
+<script>function rideCustomer(r){
+ let h='<div class="stack"><span class="pill '+(r.status==='RIDE_STARTED'?'ok':r.status==='COMPLETED'?'ok':'warn')+'">'+esc(r.status)+'</span><b>'+esc(r.vehicle)+' • '+esc(r.driverName||'Assigned driver')+'</b>';
+ if(r.driverId||r.driverPhone)h+='<div class="success"><b>Driver phone: '+esc(r.driverPhone||'Available in active ride')+'</b></div>';
+ h+='<span class="muted">'+esc(r.pickup)+' → '+esc(r.destination)+'</span>';
+ if(r.status==='OTP_PENDING')h+='<div class="notice">Ride OTP: <b style="font-size:22px;letter-spacing:4px">'+esc(r.otp||'Check notification')+'</b><br><span class="small">Give this OTP to the driver only after reaching the pickup point.</span></div>';
+ if(r.status==='RIDE_STARTED')h+='<div class="notice">Live driver location is updating during this ride.</div><button class="danger" onclick="sos()">SOS</button><button class="primary" onclick="completeRide('+r.id+')">Complete ride</button>';
+ if(r.status==='COMPLETED'&&r.paymentStatus!=='PAID')h+='<div class="notice">Payment pending</div><div class="row"><button class="secondary" onclick="payRide('+r.id+',\'CASH\')">Cash</button><button class="primary" onclick="payRide('+r.id+',\'UPI\')">UPI</button></div>';
+ return h+'</div>'
+}
+function rideRequest(r){return '<div class="ride"><div class="ride-title"><b>New ride #'+r.id+'</b><span class="pill warn">'+r.vehicle+'</span></div><div>'+esc(r.pickup)+' → '+esc(r.destination)+'</div><div class="small muted">Estimated ₹'+r.fare+' • '+r.distance+' km</div><div class="row" style="margin-top:9px"><button class="primary" onclick="acceptRide('+r.id+')">Accept</button><button class="danger" onclick="rejectRide('+r.id+')">Reject</button></div></div>'}
+function rideDriver(r){return '<div class="ride"><b>Ride #'+r.id+'</b><div class="small">'+esc(r.pickup)+' → '+esc(r.destination)+'</div><div style="margin-top:8px"><b>OTP verification</b><div class="row"><input id="otpInput" maxlength="4" inputmode="numeric" placeholder="4-digit OTP" style="padding:10px;border:1px solid var(--line);border-radius:10px;width:150px"><button class="primary" onclick="verifyOtp('+r.id+')">Verify</button></div><div class="small muted">Maximum 2 attempts. Second wrong attempt cancels the ride.</div></div></div>'}
+async function book(){
+ if(!state.session||state.session.role!=='CUSTOMER'){openModal('authModal');chooseRole('CUSTOMER');toast('Login/register as Customer first');return}
+ if(activeRide()){toast('Finish the current ride first');return}
+ try{
+  await calculateGoogleRoute();
+  const p=coordsFromInput('pickup'),d=coordsFromInput('destination');
+  if(!p||!d)throw new Error('Select pickup and destination on the map');
+  const v=vehicle(),km=Math.max(.1,+$('distance').value||0),mins=Math.max(1,+$('minutes').value||1);
+  const r=await dbRpc('create_ride',{p_vehicle:v,p_pickup:$('pickup').value.trim(),p_destination:$('destination').value.trim(),p_pickup_lat:p.lat,p_pickup_lng:p.lng,p_destination_lat:d.lat,p_destination_lng:d.lng,p_distance_km:km,p_duration_minutes:mins});
+  await refreshBackend();
+  toast(r?.driver_id?'Ride assigned to a verified nearby driver':'Ride request created; waiting for a nearby driver');
+ }catch(e){console.error(e);toast(e.message||'Could not create ride')}
+}
+async function acceptRide(id){try{await dbRpc('claim_ride',{p_ride_id:id});await refreshBackend();toast('Ride accepted. Customer OTP is now available to the customer.')}catch(e){toast(e.message||'Ride is no longer available')}}
+async function rejectRide(id){try{await dbRpc('cancel_ride',{p_ride_id:id,p_reason:'Driver rejected'});await refreshBackend();toast('Ride rejected')}catch(e){toast(e.message||'Could not reject ride')}}
+async function verifyOtp(id){const val=($('otpInput').value||'').replace(/\D/g,'');if(!/^\d{4}$/.test(val)){toast('Enter the 4-digit OTP');return}try{const r=await dbRpc('verify_ride_otp',{p_ride_id:id,p_otp:val});await refreshBackend();if(r?.status==='CANCELLED')toast('Ride cancelled after 2 wrong OTP attempts');else if(r?.status==='RIDE_STARTED')toast('OTP verified — ride started');}catch(e){toast(e.message||'OTP verification failed')}}
+async function completeRide(id){try{await dbRpc('complete_ride',{p_ride_id:id});await refreshBackend();toast('Ride completed. Select payment method.')}catch(e){toast(e.message||'Could not complete ride')}}
+async function payRide(id,method){try{const status=method==='CASH'?'PAID':'PROCESSING';await dbRpc('record_payment',{p_ride_id:id,p_method:method,p_status:status});await refreshBackend();toast(method==='CASH'?'Cash payment recorded':'UPI/online payment is pending provider confirmation')}catch(e){toast(e.message||'Payment failed')}}
+async function sos(){const r=activeRide();if(!r){toast('No active ride');return}const p=coordsFromInput('pickup');try{await dbRpc('create_sos',{p_ride_id:r.id,p_lat:p?.lat||null,p_lng:p?.lng||null,p_message:'SOS requested from active ride'});toast('SOS recorded and sent to safety system')}catch(e){toast(e.message||'SOS could not be sent')}}
+
 const SUPABASE_URL='https://fvigmtojeywwyhfgyeww.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY='sb_publishable_DV1qmRyMo7kjtJxQ2JW_HA_rF9ACkuf';
 let supabase=null;
