@@ -116,10 +116,11 @@ body.login-screen .login-gate{min-height:100dvh;background:
   <div class="login-tagline">YOUR RIDE • OUR ASSAM</div>
   <div class="login-title">Welcome</div>
   <div class="login-subtitle">Safe, simple rides across Assam.</div>
+  <div class="small" style="color:#71857b;margin-bottom:12px">New user? Create Account • Existing user? Login • Forgot password? Get OTP</div>
   <div class="login-actions premium-actions">
-    <button type="button" class="primary login-main-btn" id="loginStartBtn" onclick="document.getElementById('authModal')?.classList.add('show');if(typeof openRoleChooser==='function'){openRoleChooser('LOGIN')}">🔐 Sign In</button>
-    <button type="button" class="create-account-btn login-main-btn" id="createAccountBtn" onclick="openRoleChooser('SIGNUP')">✨ Create Account</button>
-    <button type="button" class="login-link-btn" id="forgotPasswordBtn" onclick="openForgotPassword()">Forgot Password?</button>
+    <button type="button" class="primary login-main-btn" id="loginStartBtn" onclick="document.getElementById('authModal')?.classList.add('show');if(typeof openRoleChooser==='function'){openRoleChooser('LOGIN')}">🔐 Login <span class="small" style="opacity:.8">• Existing User</span></button>
+    <button type="button" class="create-account-btn login-main-btn" id="createAccountBtn" onclick="openRoleChooser('SIGNUP')">✨ Create Account <span class="small" style="opacity:.75">• New User</span></button>
+    <button type="button" class="login-link-btn" id="forgotPasswordBtn" onclick="openForgotPassword()">Forgot Password? <span class="small">• Get OTP</span></button>
   </div>
   <div class="login-note"><span>●</span> Customer & Driver accounts are separate</div>
   <div class="login-terms">By continuing, you agree to Assam Drive's<br><u>Terms of Service</u> and <u>Privacy Policy</u></div>
