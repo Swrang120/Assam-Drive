@@ -67,7 +67,7 @@ body.login-screen .login-gate{min-height:100dvh;background:#070707;color:#fff;di
 .login-alt{display:grid;grid-template-columns:1fr 1fr;gap:16px;width:100%}
 .login-alt button{height:68px;border:1px solid #55515f;border-radius:20px;background:#17151b;color:#fff;font-size:22px}
 .login-alt button span{display:block;font-size:13px;margin-top:4px;color:#aaa6b0}
-.login-terms{margin-top:26px;color:#77737d;font-size:12px;line-height:1.6}
+.login-terms{margin-top:26px;color:#77737d;font-size:12px;line-height:1.6}.login-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;margin-top:12px}.login-actions button{padding:15px;border-radius:16px;font-weight:800}.login-password{width:100%;padding:17px;border:1px solid #39353f;border-radius:18px;background:#17151b;color:#fff;outline:0;font-size:16px;margin-bottom:10px}.login-password::placeholder{color:#77737d}.login-link{background:transparent;color:#c8c3cc;border:0;font-weight:750;padding:10px} 
 .login-terms u{color:#aaa6b0}
 .login-driver{margin-top:20px;background:transparent;color:#d8d4dc;border:0;font-weight:750}
 .login-status{min-height:22px;margin-top:12px;font-size:13px;color:#a8d9c3}
@@ -107,7 +107,7 @@ body.login-screen .login-gate{min-height:100dvh;background:#070707;color:#fff;di
 <div class="login-phone"><div class="country">+91⌄</div><input id="loginGatePhone" inputmode="tel" autocomplete="tel" placeholder="Enter mobile number"></div>
 <button class="login-otp" id="loginGateOtp" type="button">GET OTP</button>
 <div class="login-status" id="loginGateStatus"></div>
-<div class="login-or">OR CONTINUE WITH</div>
+<div class="login-actions"><button type="button" class="secondary" onclick="openPasswordLogin('CUSTOMER')">🔐 Login with Password</button><button type="button" class="ghost" onclick="chooseRole('CUSTOMER');gateSetStatus('Create your account with OTP, then set a password.',true)">🆕 Create Account</button></div><div class="login-or">OR CONTINUE WITH</div>
 <div class="login-alt">
 <button type="button" onclick="gateGoogleLogin()">G <span>Google</span></button>
 <button type="button" onclick="gateEmailLogin()">✉ <span>Email</span></button>
@@ -173,7 +173,7 @@ body.login-screen .login-gate{min-height:100dvh;background:#070707;color:#fff;di
 
 <div class="modal" id="authModal"><div class="modalbox stack">
 <div class="row between"><h2>Assam Drive account</h2><button class="ghost" onclick="closeModal('authModal')">✕</button></div>
-<div class="role"><button onclick="chooseRole('CUSTOMER')">👤<br>Customer<br><span class="small muted">Book rides</span></button><button onclick="chooseRole('DRIVER')">🚗<br>Driver<br><span class="small muted">Drive & earn</span></button></div>
+<div class="role"><button type="button" onclick="chooseRole('CUSTOMER')">👤<br>Customer<br><span class="small muted">Book rides</span></button><button type="button" onclick="chooseRole('DRIVER')">🚗<br>Driver<br><span class="small muted">Drive & earn</span></button></div>
 <div id="authForm"></div>
 </div></div>
 
@@ -280,20 +280,99 @@ async function gateSendOtp(){
  gateSetStatus('Sending OTP…',true);
  const {error}=await supabase.auth.signInWithOtp({phone:p,options:{data:{requested_role:'CUSTOMER'}}});
  if(error){gateSetStatus(error.message);return}
- const btn=$('loginGateOtp');btn.textContent='OTP SENT — OPEN LOGIN';btn.classList.add('ready');btn.onclick=()=>{openModal('authModal');chooseRole('CUSTOMER');$('authPhone').value=p};gateSetStatus('OTP sent. Enter it in the verification screen.',true);
+ const btn=$('loginGateOtp');btn.textContent='OTP SENT — OPEN LOGIN';btn.classList.add('ready');btn.onclick=()=>{openModal('authModal');startOtpSignup('CUSTOMER');$('authPhone').value=p};gateSetStatus('OTP sent. Enter it in the verification screen.',true);
 }
 function gateGoogleLogin(){
  if(!supabaseReady||!supabase){gateSetStatus('Login service is still loading. Please try again.');return}
  localStorage.setItem('assam_drive_pending_role','CUSTOMER');
- supabase.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.href}});
+ const {error}=await supabase.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.href}});
+ if(error)gateSetStatus(error.message);
 }
-function gateEmailLogin(){openModal('authModal');$('authForm').innerHTML='<div class="stack"><div class="field"><label>Email address</label><input id="authEmail" type="email" autocomplete="email" placeholder="you@example.com"></div><button class="primary" onclick="sendEmailOtp(\'CUSTOMER\')">Send email code</button><div class="small muted">Email sign-in must be enabled in Supabase Auth.</div></div>'}
-async function sendEmailOtp(role){if(!supabaseReady||!supabase){toast('Login service is unavailable right now.');return}const email=($('authEmail')?.value||'').trim();if(!/^\S+@\S+\.\S+$/.test(email)){toast('Enter a valid email address');return}const {error}=await supabase.auth.signInWithOtp({email,options:{data:{requested_role:role}}});if(error){toast(error.message);return}$('authForm').innerHTML='<div class="stack"><div class="success">Verification email/code sent to '+esc(email)+'</div><div class="field"><label>Verification code</label><input id="authEmailOtp" inputmode="numeric" autocomplete="one-time-code"></div><button class="primary" onclick="verifyEmailOtp(\''+role+'\',\''+encodeURIComponent(email)+'\')">Verify</button></div>'}
-async function verifyEmailOtp(role,ee){const email=decodeURIComponent(ee),token=($('authEmailOtp')?.value||'').replace(/\D/g,'');if(!supabaseReady||!supabase||token.length<4){toast('Enter the verification code');return}const {data,error}=await supabase.auth.verifyOtp({email,token,type:'email'});if(error){toast(error.message);return}await establishSupabaseUser(role,data.user);closeModal('authModal');save();toast('Login successful')}
-function chooseRole(role){$('authForm').innerHTML='<div class="stack"><div class="field"><label>Mobile number</label><input id="authPhone" inputmode="tel" autocomplete="tel" placeholder="+91 9XXXXXXXXX"></div><button class="primary" onclick="sendOtp(\''+role+'\')">Send OTP</button><div class="small muted">A 6-digit OTP will be sent by Supabase Auth SMS. The SMS provider must be enabled in the Supabase project.</div></div>'}
-async function sendOtp(role){if(!supabaseReady||!supabase){toast('Login service is still loading. Please try again.');return}const raw=($('authPhone').value||'').trim();const p=raw.replace(/[\s()-]/g,'');if(!/^\+91\d{10}$/.test(p)){toast('Enter Indian mobile number like +919876543210');return}$('authForm').innerHTML='<div class="stack"><div class="success">Sending OTP to '+esc(p)+'…</div></div>';const {error}=await supabase.auth.signInWithOtp({phone:p,options:{data:{requested_role:role}}});if(error){$('authForm').innerHTML='<div class="notice">'+esc(error.message)+'</div><button class="secondary" onclick="chooseRole(\''+role+'\')">Try again</button>';toast('OTP could not be sent');return}$('authForm').innerHTML='<div class="stack"><div class="success">OTP sent to '+esc(p)+'</div><div class="field"><label>6-digit OTP</label><input id="authOtp" maxlength="6" inputmode="numeric" autocomplete="one-time-code"></div><button class="primary" onclick="verifyAuth(\''+role+'\',\''+encodeURIComponent(p)+'\')">Verify OTP</button><button class="ghost" onclick="chooseRole(\''+role+'\')">Change number</button><div class="small muted">OTP verification is handled by Supabase Auth.</div></div>'}
-async function verifyAuth(role,ep){if(!supabaseReady||!supabase){toast('Login service is unavailable right now.');return}const p=decodeURIComponent(ep),otp=($('authOtp').value||'').replace(/\D/g,'');if(otp.length!==6){toast('Enter the 6-digit OTP');return}const {data,error}=await supabase.auth.verifyOtp({phone:p,token:otp,type:'sms'});if(error){toast(error.message);return}await establishSupabaseUser(role,data.user);closeModal('authModal');save();toast(role==='CUSTOMER'?'Customer login successful':'Driver login successful')}
-async function establishSupabaseUser(role,user){if(!user)return;const phone=user.phone||'';if(role==='CUSTOMER'){let u=state.customers.find(x=>x.id===user.id)||state.customers.find(x=>x.phone===phone);if(!u){u={id:user.id,name:user.user_metadata?.name||'New Customer',phone,photo:''};state.customers.push(u)}else{u.id=user.id;u.phone=phone}state.session={role:'CUSTOMER',id:u.id}}else{let d=state.drivers.find(x=>x.id===user.id)||state.drivers.find(x=>x.phone===phone);if(!d){d={id:user.id,name:user.user_metadata?.name||'New Driver',phone,vehicle:'BIKE',registration:'',verified:false,verification:'PENDING',online:false,earn:0,photo:'',documents:[],checks:[]};state.drivers.push(d)}else{d.id=user.id;d.phone=phone}state.session={role:'DRIVER',id:d.id}}}
+function gateEmailLogin(){openPasswordLogin('CUSTOMER','EMAIL')}
+function passwordLoginForm(role,mode='PHONE'){
+ const label=mode==='EMAIL'?'Gmail / Email address':'Mobile number';
+ const input=mode==='EMAIL'
+  ? '<input id="authLoginEmail" class="login-password" type="email" autocomplete="email" placeholder="you@example.com">'
+  : '<div class="login-phone"><div class="country">+91⌄</div><input id="authLoginPhone" inputmode="tel" autocomplete="tel" placeholder="10-digit mobile number"></div>';
+ return '<div class="stack"><div class="notice small">Returning user? Enter your '+(mode==='EMAIL'?'email':'mobile number')+' and password.</div>'+input+'<input id="authLoginPassword" class="login-password" type="password" autocomplete="current-password" placeholder="Password"><button class="primary" type="button" onclick="loginWithPassword(\''+role+'\',\''+mode+'\')">Login</button><button class="login-link" type="button" onclick="chooseRole(\''+role+'\')">Create account / use OTP instead</button></div>';
+}
+function openPasswordLogin(role,mode='PHONE'){
+ openModal('authModal');
+ $('authForm').innerHTML=passwordLoginForm(role,mode);
+}
+function chooseRole(role){
+ $('authForm').innerHTML='<div class="stack"><div class="notice"><b>'+ (role==='DRIVER'?'Driver':'Customer') +' account</b><br>Create your account with OTP verification. After OTP verification, you will set a password for future login.</div><button class="primary" type="button" onclick="startOtpSignup(\''+role+'\')">📱 Create account with Mobile OTP</button><button class="secondary" type="button" onclick="openPasswordLogin(\''+role+'\',\'PHONE\')">🔐 Login with Mobile + Password</button><button class="secondary" type="button" onclick="openPasswordLogin(\''+role+'\',\'EMAIL\')">✉️ Login with Gmail/Email + Password</button><button class="ghost" type="button" onclick="startEmailSignup(\''+role+'\')">Create account with Email OTP</button></div>';
+}
+function startOtpSignup(role){
+ $('authForm').innerHTML='<div class="stack"><div class="field"><label>Mobile number</label><div class="login-phone"><div class="country">+91⌄</div><input id="authPhone" inputmode="tel" autocomplete="tel" placeholder="10-digit mobile number"></div></div><button class="primary" type="button" onclick="sendOtp(\''+role+'\')">Send OTP</button><button class="ghost" type="button" onclick="chooseRole(\''+role+'\')">Back</button><div class="small muted">OTP is used only to verify the account. After verification you will set your password.</div></div>';
+}
+async function startEmailSignup(role){
+ $('authForm').innerHTML='<div class="stack"><div class="field"><label>Gmail / Email address</label><input id="authEmail" class="login-password" type="email" autocomplete="email" placeholder="you@example.com"></div><button class="primary" type="button" onclick="sendEmailOtp(\''+role+'\')">Send email OTP</button><button class="ghost" type="button" onclick="chooseRole(\''+role+'\')">Back</button></div>';
+}
+async function sendEmailOtp(role){
+ if(!supabaseReady||!supabase){toast('Login service is still loading.');return}
+ const email=($('authEmail')?.value||'').trim().toLowerCase();
+ if(!/^\S+@\S+\.\S+$/.test(email)){toast('Enter a valid email address');return}
+ $('authForm').innerHTML='<div class="success">Sending verification code to '+esc(email)+'…</div>';
+ const {error}=await supabase.auth.signInWithOtp({email,options:{data:{requested_role:role}}});
+ if(error){$('authForm').innerHTML='<div class="notice">'+esc(error.message)+'</div><button class="secondary" type="button" onclick="startEmailSignup(\''+role+'\')">Try again</button>';return}
+ $('authForm').innerHTML='<div class="stack"><div class="success">Verification code sent to '+esc(email)+'</div><div class="field"><label>Verification code</label><input id="authEmailOtp" maxlength="6" inputmode="numeric" autocomplete="one-time-code" class="login-password" placeholder="6-digit code"></div><button class="primary" type="button" onclick="verifyEmailSignup(\''+role+'\',\''+encodeURIComponent(email)+'\')">Verify & continue</button></div>';
+}
+async function verifyEmailSignup(role,ee){
+ const email=decodeURIComponent(ee),token=($('authEmailOtp')?.value||'').replace(/\D/g,'');
+ if(token.length<4){toast('Enter the verification code');return}
+ const {data,error}=await supabase.auth.verifyOtp({email,token,type:'email'});
+ if(error){toast(error.message);return}
+ await establishSupabaseUser(role,data.user);
+ showSetPassword(role,'EMAIL',email);
+}
+function showSetPassword(role,mode,identifier){
+ $('authForm').innerHTML='<div class="stack"><div class="success">Account verified successfully.</div><div class="field"><label>Create password</label><input id="newPassword" class="login-password" type="password" autocomplete="new-password" placeholder="At least 8 characters"></div><div class="field"><label>Confirm password</label><input id="confirmPassword" class="login-password" type="password" autocomplete="new-password" placeholder="Repeat password"></div><button class="primary" type="button" onclick="setAccountPassword(\''+role+'\',\''+mode+'\',\''+encodeURIComponent(identifier)+'\')">Set Password & Finish</button><div class="small muted">Your password is handled by Supabase Auth and is not stored in this app's local storage.</div></div>';
+}
+async function setAccountPassword(role,mode,ei){
+ if(!supabaseReady||!supabase){toast('Login service is unavailable.');return}
+ const p=$('newPassword')?.value||'',q=$('confirmPassword')?.value||'';
+ if(p.length<8){toast('Password must be at least 8 characters');return}
+ if(p!==q){toast('Passwords do not match');return}
+ const {error}=await supabase.auth.updateUser({password:p});
+ if(error){toast(error.message);return}
+ closeModal('authModal');save();toast('Account created. Password login is ready.');
+}
+function normalizePhone(raw){
+ const digits=(raw||'').replace(/\D/g,'');
+ return digits.length===10?'+91'+digits:(raw||'').replace(/[\s()-]/g,'');
+}
+async function loginWithPassword(role,mode){
+ if(!supabaseReady||!supabase){toast('Login service is still loading.');return}
+ let identifier='',password=$('authLoginPassword')?.value||'';
+ if(mode==='EMAIL')identifier=($('authLoginEmail')?.value||'').trim().toLowerCase();else identifier=normalizePhone($('authLoginPhone')?.value||'');
+ if(mode==='EMAIL'&&!/^\S+@\S+\.\S+$/.test(identifier)){toast('Enter a valid Gmail/email address');return}
+ if(mode==='PHONE'&&!/^\+91\d{10}$/.test(identifier)){toast('Enter a 10-digit Indian mobile number');return}
+ if(password.length<8){toast('Enter your password (minimum 8 characters)');return}
+ const payload=mode==='EMAIL'?{email:identifier,password}:{phone:identifier,password};
+ const {data,error}=await supabase.auth.signInWithPassword(payload);
+ if(error){toast(error.message);return}
+ await establishSupabaseUser(role,data.user);closeModal('authModal');save();toast(role==='CUSTOMER'?'Customer login successful':'Driver login successful');
+}
+async function sendOtp(role){
+ if(!supabaseReady||!supabase){toast('Login service is still loading.');return}
+ const p=normalizePhone($('authPhone')?.value||'');
+ if(!/^\+91\d{10}$/.test(p)){toast('Enter a 10-digit Indian mobile number');return}
+ $('authForm').innerHTML='<div class="success">Sending OTP to '+esc(p)+'…</div>';
+ const {error}=await supabase.auth.signInWithOtp({phone:p,options:{data:{requested_role:role}}});
+ if(error){$('authForm').innerHTML='<div class="notice">'+esc(error.message)+'</div><button class="secondary" type="button" onclick="startOtpSignup(\''+role+'\')">Try again</button>';return}
+ $('authForm').innerHTML='<div class="stack"><div class="success">OTP sent to '+esc(p)+'</div><div class="field"><label>6-digit OTP</label><input id="authOtp" maxlength="6" inputmode="numeric" autocomplete="one-time-code" class="login-password" placeholder="Enter OTP"></div><button class="primary" type="button" onclick="verifyAuth(\''+role+'\',\''+encodeURIComponent(p)+'\')">Verify OTP</button><button class="ghost" type="button" onclick="startOtpSignup(\''+role+'\')">Change number</button></div>';
+}
+async function verifyAuth(role,ep){
+ if(!supabaseReady||!supabase){toast('Login service is unavailable right now.');return}
+ const p=decodeURIComponent(ep),otp=($('authOtp')?.value||'').replace(/\D/g,'');
+ if(otp.length!==6){toast('Enter the 6-digit OTP');return}
+ const {data,error}=await supabase.auth.verifyOtp({phone:p,token:otp,type:'sms'});
+ if(error){toast(error.message);return}
+ await establishSupabaseUser(role,data.user);
+ showSetPassword(role,'PHONE',p);
+}
+function establishSupabaseUser(role,user){if(!user)return;const phone=user.phone||'';if(role==='CUSTOMER'){let u=state.customers.find(x=>x.id===user.id)||state.customers.find(x=>x.phone===phone);if(!u){u={id:user.id,name:user.user_metadata?.name||'New Customer',phone,photo:''};state.customers.push(u)}else{u.id=user.id;u.phone=phone}state.session={role:'CUSTOMER',id:u.id}}else{let d=state.drivers.find(x=>x.id===user.id)||state.drivers.find(x=>x.phone===phone);if(!d){d={id:user.id,name:user.user_metadata?.name||'New Driver',phone,vehicle:'BIKE',registration:'',verified:false,verification:'PENDING',online:false,earn:0,photo:'',documents:[],checks:[]};state.drivers.push(d)}else{d.id=user.id;d.phone=phone}state.session={role:'DRIVER',id:d.id}}}
 function editProfile(){const u=currentUser();$('profileName').value=u.name;$('profilePhone').value=u.phone;openModal('profileModal')}
 function saveProfile(){const u=currentUser();if(!u)return;u.name=$('profileName').value.trim()||u.name;const f=$('profilePhoto').files[0];if(f){const rd=new FileReader();rd.onload=()=>{u.photo=rd.result;closeModal('profileModal');save()};rd.readAsDataURL(f)}else{closeModal('profileModal');save()}toast('Profile updated')}
 function submitDriverRegistration(){const d=currentUser();if(!d||state.session.role!=='DRIVER'){toast('Login as Driver first');return}d.name=$('regName').value.trim()||d.name;d.phone=$('regPhone').value.trim()||d.phone;d.vehicle=$('regVehicle').value;d.registration=$('regRc').value.trim();d.verification='UNDER_REVIEW';d.online=false;d.documents=[];['regDl','regId','regRcDoc','regInsurance','regPuc','regPermit','regVehiclePhoto'].forEach(id=>{const f=$(id).files[0];if(f)d.documents.push($(id).previousElementSibling.textContent||id)});d.checks=runPrecheck();closeModal('driverModal');save();toast('Documents submitted for admin verification')}
