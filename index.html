@@ -143,8 +143,7 @@ function book(){
  const d=state.drivers.find(x=>x.online&&x.verified&&x.vehicle===vehicle());
  if(!d){toast('No verified '+vehicle().toLowerCase()+' driver is online');return}
  const r={id:state.seq++,vehicle:vehicle(),pickup:$('pickup').value.trim(),destination:$('destination').value.trim(),fare:Math.round(estimate()),status:'SEARCHING',driverId:null,driverName:null,otp:null,otpAttempts:0,created:Date.now()};
- state.rides.push(r);save();toast('Ride request sent');
- setTimeout(()=>{if(r.status==='SEARCHING'){r.status='DRIVER_ASSIGNED';r.driverId=d.id;r.driverName=d.name;r.status='OTP_PENDING';r.otp=String(Math.floor(1000+Math.random()*9000));save();toast('Driver assigned')}} ,700);
+ state.rides.push(r);save();toast('Ride request sent to the verified driver');
 }
 function acceptRide(){const r=state.rides.find(x=>x.status==='SEARCHING');if(!r)return;r.driverId='d1';r.driverName=state.drivers[0].name;r.status='OTP_PENDING';r.otp=String(Math.floor(1000+Math.random()*9000));save();toast('Ride accepted')}
 function rejectRide(){const r=state.rides.find(x=>x.status==='SEARCHING');if(!r)return;r.status='CANCELLED';r.cancelReason='Driver rejected';save();toast('Ride rejected')}
