@@ -282,7 +282,7 @@ async function gateSendOtp(){
  if(error){gateSetStatus(error.message);return}
  const btn=$('loginGateOtp');btn.textContent='OTP SENT — OPEN LOGIN';btn.classList.add('ready');btn.onclick=()=>{openModal('authModal');startOtpSignup('CUSTOMER');$('authPhone').value=p};gateSetStatus('OTP sent. Enter it in the verification screen.',true);
 }
-function gateGoogleLogin(){
+async function gateGoogleLogin(){
  if(!supabaseReady||!supabase){gateSetStatus('Login service is still loading. Please try again.');return}
  localStorage.setItem('assam_drive_pending_role','CUSTOMER');
  const {error}=await supabase.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.href}});
