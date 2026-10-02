@@ -518,7 +518,7 @@ function openForgotPassword(){
   passwordRecoveryOtpPending=false;
   authFlowStage='RECOVERY';
   setAuthFlow('Forgot Password','This flow is separate from Login and Create Account.');
-  $('authForm').innerHTML='<div class="stack"><div class="notice"><b>🔑 Reset your password</b><br>Enter the Gmail/email linked to your Assam Drive account. We will send a one-time OTP.</div><div class="field"><label>Gmail / Email address</label><input id="recoveryEmail" type="email" autocomplete="email" placeholder="you@gmail.com"></div><button class="primary" type="button" onclick="sendPasswordReset()">📩 Send OTP</button><button class="ghost" type="button" onclick="openRoleChooser('LOGIN')">← Back to Login</button></div>';
+  $('authForm').innerHTML='<div class="stack"><div class="notice"><b>🔑 Reset your password</b><br>Enter the Gmail/email linked to your Assam Drive account. We will send a one-time OTP.</div><div class="field"><label>Gmail / Email address</label><input id="recoveryEmail" type="email" autocomplete="email" placeholder="you@gmail.com"></div><button class="primary" type="button" onclick="sendPasswordReset()">📩 Send OTP</button><button class="ghost" type="button" onclick="openRoleChooser(\'LOGIN\')">← Back to Login</button></div>';
 }
 async function sendPasswordReset(){
   if(!supabaseReady||!supabase){toast('Login service is unavailable.');return}
