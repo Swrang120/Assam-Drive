@@ -3,7 +3,7 @@ function rideCustomer(r){
  if(r.driverId||r.driverPhone)h+='<div class="success"><b>Driver phone: '+esc(r.driverPhone||'Available in active ride')+'</b></div>';
  h+='<span class="muted">'+esc(r.pickup)+' → '+esc(r.destination)+'</span>';
  if(r.status==='OTP_PENDING')h+='<div class="notice">Ride OTP: <b style="font-size:22px;letter-spacing:4px">'+esc(r.otp||'Check notification')+'</b><br><span class="small">Give this OTP to the driver only after reaching the pickup point.</span></div>';
- if(r.status==='RIDE_STARTED')h+='<div class="notice">Live location sharing is active during this ride.</div><button class="danger" onclick="sos()">SOS</button><button class="primary" onclick="completeRide('+r.id+')">Complete ride</button>';
+ if(r.status==='RIDE_STARTED')h+='<div class="notice">Live driver location is updating during this ride.</div><button class="danger" onclick="sos()">SOS</button><button class="primary" onclick="completeRide('+r.id+')">Complete ride</button>';
  if(r.status==='COMPLETED'&&r.paymentStatus!=='PAID')h+='<div class="notice">Payment pending</div><div class="row"><button class="secondary" onclick="payRide('+r.id+',\'CASH\')">Cash</button><button class="primary" onclick="payRide('+r.id+',\'UPI\')">UPI</button></div>';
  return h+'</div>'
 }
@@ -26,7 +26,7 @@ async function acceptRide(id){try{await dbRpc('claim_ride',{p_ride_id:id});await
 async function rejectRide(id){try{await dbRpc('cancel_ride',{p_ride_id:id,p_reason:'Driver rejected'});await refreshBackend();toast('Ride rejected')}catch(e){toast(e.message||'Could not reject ride')}}
 async function verifyOtp(id){const val=($('otpInput').value||'').replace(/\D/g,'');if(!/^\d{4}$/.test(val)){toast('Enter the 4-digit OTP');return}try{const r=await dbRpc('verify_ride_otp',{p_ride_id:id,p_otp:val});await refreshBackend();if(r?.status==='CANCELLED')toast('Ride cancelled after 2 wrong OTP attempts');else if(r?.status==='RIDE_STARTED')toast('OTP verified — ride started');}catch(e){toast(e.message||'OTP verification failed')}}
 async function completeRide(id){try{await dbRpc('complete_ride',{p_ride_id:id});await refreshBackend();toast('Ride completed. Select payment method.')}catch(e){toast(e.message||'Could not complete ride')}}
-async function payRide(id,method){try{await dbRpc('record_payment',{p_ride_id:id,p_method:method,p_status:'PAID'});await refreshBackend();toast('Payment marked as paid')}catch(e){toast(e.message||'Payment failed')}}
+async function payRide(id,method){try{const status=method==='CASH'?'PAID':'PROCESSING';await dbRpc('record_payment',{p_ride_id:id,p_method:method,p_status:status});await refreshBackend();toast(method==='CASH'?'Cash payment recorded':'UPI/online payment is pending provider confirmation')}catch(e){toast(e.message||'Payment failed')}}
 async function sos(){const r=activeRide();if(!r){toast('No active ride');return}const p=coordsFromInput('pickup');try{await dbRpc('create_sos',{p_ride_id:r.id,p_lat:p?.lat||null,p_lng:p?.lng||null,p_message:'SOS requested from active ride'});toast('SOS recorded and sent to safety system')}catch(e){toast(e.message||'SOS could not be sent')}}
 <!doctype html>
 <html lang="en">
@@ -650,6 +650,7 @@ async function refreshBackend(){
      if(activeIds.length){const q=await supabase.from('ride_otp').select('ride_id,customer_otp,expires_at').in('ride_id',activeIds);if(!q.error)(q.data||[]).forEach(o=>{const x=mapped.find(r=>r.id===o.ride_id);if(x&&new Date(o.expires_at)>new Date())x.otp=o.customer_otp})}
    }
    state.rides=mapped;
+   if(state.session.role==='CUSTOMER'){const active=mapped.find(r=>['DRIVER_ASSIGNED','OTP_PENDING','RIDE_STARTED'].includes(r.status));if(active){const q=await supabase.from('ride_location_updates').select('lat,lng,recorded_at').eq('ride_id',active.id).order('recorded_at',{ascending:false}).limit(1).maybeSingle();if(!q.error&&q.data){active.driverLat=q.data.lat;active.driverLng=q.data.lng;active.driverLocationAt=q.data.recorded_at}}}
    if(state.session.role==='DRIVER'){
      const q=await dbRpc('get_driver_ride_queue');
      state.rides=[...mapped,...(q||[]).map(r=>({id:r.id,vehicle:r.vehicle_type,pickup:r.pickup_text,destination:r.destination_text,distance:Number(r.distance_km||0),minutes:Number(r.duration_minutes||0),fare:Number(r.fare||0),status:r.status,driverId:r.driver_id,driverName:null,driverPhone:r.driver_phone_snapshot||'',created:new Date(r.created_at).getTime()}))].filter((x,i,a)=>a.findIndex(y=>y.id===x.id)===i);
@@ -749,7 +750,7 @@ $('saveFare').onclick=async()=>{if(!supabaseReady||!supabase){toast('Backend una
 document.querySelectorAll('.navbtn[data-view]').forEach(b=>b.onclick=()=>{if(!state.session){openModal('authModal');chooseRole(b.dataset.view==='driver'?'DRIVER':'CUSTOMER');return}if(b.dataset.view==='admin'){if(state.session.role!=='ADMIN'&&state.session.role!=='SUPER_ADMIN')return;render();return}if(b.dataset.view.toUpperCase()!==state.session.role){toast('Please use the correct account type');return}render()});
 
 const GOOGLE_MAPS_KEY='AIzaSyAOVYRIgupAurZup5y1PRh8Ismb1A3lLao';
-let googleMap=null, googleGeocoder=null, googleRoute=null, googlePolylines=[], pickupMarker=null, destinationMarker=null, userLocationMarker=null, locationWatchId=null;
+let googleMap=null, googleGeocoder=null, googleRoute=null, googlePolylines=[], pickupMarker=null, destinationMarker=null, userLocationMarker=null, liveDriverMarker=null, locationWatchId=null;
 let googleMapsLoaded=false;
 
 function setLocationStatus(msg,ok=false){const el=$('locationStatus');if(el){el.textContent=msg;el.className='small '+(ok?'success':'muted');}}
@@ -840,7 +841,7 @@ async function calculateGoogleRoute(){
 function startLocationWatch(centerMap=true){
   if(!navigator.geolocation){setLocationStatus('This device/browser does not support GPS.');return}
   if(locationWatchId!==null)return;
-  navigator.geolocation.getCurrentPosition(p=>handleUserLocation(p,centerMap),()=>setLocationStatus('Location permission was not granted.'),{enableHighAccuracy:true,timeout:12000,maximumAge:5000});
+  locationWatchId=navigator.geolocation.watchPosition(p=>handleUserLocation(p,centerMap),()=>setLocationStatus('Location permission was not granted.'),{enableHighAccuracy:true,timeout:12000,maximumAge:5000});
 }
 function handleUserLocation(p,centerMap){
  const pos={lat:p.coords.latitude,lng:p.coords.longitude};
@@ -848,6 +849,7 @@ function handleUserLocation(p,centerMap){
  if(pickup&&!pickup.value){pickup.value='Current location';pickup.dataset.lat=pos.lat;pickup.dataset.lng=pos.lng}
  if(googleMap){if(userLocationMarker)userLocationMarker.setPosition(pos);else userLocationMarker=new google.maps.Marker({map:googleMap,position:pos,title:'Your current location'});if(centerMap)googleMap.setCenter(pos)}
  setLocationStatus('Current GPS location detected: '+pos.lat.toFixed(5)+', '+pos.lng.toFixed(5),true);
+ if(state.session?.role==='CUSTOMER'&&googleMap&&state.rides.some(r=>['DRIVER_ASSIGNED','OTP_PENDING','RIDE_STARTED'].includes(r.status))){const r=state.rides.find(r=>['DRIVER_ASSIGNED','OTP_PENDING','RIDE_STARTED'].includes(r.status));if(r?.driverLat&&r?.driverLng){const dp={lat:+r.driverLat,lng:+r.driverLng};if(liveDriverMarker)liveDriverMarker.setPosition(dp);else liveDriverMarker=new google.maps.Marker({map:googleMap,position:dp,title:'Driver live location'});}}
  if(state.session?.role==='DRIVER'&&supabaseReady&&supabase)dbRpc('update_driver_position',{p_lat:pos.lat,p_lng:pos.lng,p_accuracy:p.coords.accuracy||null}).catch(()=>{});
 }
 
