@@ -49,8 +49,15 @@ h1,h2,h3{margin:0 0 8px}h1{font-size:27px}h2{font-size:20px}h3{font-size:16px}.m
 .google-map-pin{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:#087a52;color:#fff;border:3px solid #fff;box-shadow:0 3px 12px #0004}.map-error{padding:14px;text-align:center;background:#fff5db;color:#795b00;height:100%;display:grid;place-items:center}
 /* Branded login screen */
 body.login-screen{background:#070707;color:#fff}
-body.login-screen header{display:none}
-body.login-screen .menuBtn,body.login-screen .app > header,body.login-screen .app > .sideback,body.login-screen .app > .sidemenu{display:none!important;pointer-events:none!important}
+body.login-screen header,body.login-screen .menuBtn,body.login-screen .sideback,body.login-screen .sidemenu{display:none!important;pointer-events:none!important}
+body.authenticated header{display:flex}
+body.authenticated .menuBtn{display:none}
+@media(max-width:760px){
+  body.authenticated .menuBtn{display:block}
+  body.authenticated header nav{display:none}
+}
+#authModal{z-index:2147483646!important}
+#authModal .modalbox{z-index:2147483647!important}
 body.login-screen main{padding:0}
 /* Never allow the authenticated app side-menu overlay to cover the public login screen. */
 body.login-screen .sidemenu,body.login-screen .sideback{display:none!important;pointer-events:none!important}
@@ -81,16 +88,16 @@ body.login-screen .login-gate{min-height:100dvh;background:#070707;color:#fff;di
 <div class="app">
 <header>
 <div class="brand"><img class="logo" src="./assets/assam-drive-logo.jpg" alt="Assam Drive logo"><div>Assam Drive<div class="small muted">Ride booking • Assam</div></div></div>
-<button hidden type="button" class="menuBtn" id="menuBtn" aria-label="Open menu" onclick="document.getElementById('sidemenu').classList.add('show');document.getElementById('sideback').classList.add('show')">☰</button><nav>
+<button hidden type="button" class="menuBtn" id="menuBtn" aria-label="Open menu">☰</button><nav>
 <button class="navbtn active" data-view="customer">Customer</button>
 <button class="navbtn" data-view="driver">Driver</button>
 <button class="navbtn" id="authBtn">Login / Register</button>
 <button class="navbtn" id="logoutBtn" style="display:none">Logout</button>
 </nav>
 </header>
-<div hidden class="sideback" id="sideback" onclick="document.getElementById('sidemenu').classList.remove('show');this.classList.remove('show')"></div>
+<div hidden class="sideback" id="sideback"></div>
 <aside hidden class="sidemenu" id="sidemenu" aria-label="Assam Drive menu">
-  <div class="sidehead"><div class="sidebrand"><div class="sideicon">🚗</div><div>Assam Drive<div class="small muted">Premium ride support</div></div></div><button type="button" class="ghost" id="sideClose" onclick="document.getElementById('sidemenu').classList.remove('show');document.getElementById('sideback').classList.remove('show')">✕</button></div>
+  <div class="sidehead"><div class="sidebrand"><div class="sideicon">🚗</div><div>Assam Drive<div class="small muted">Premium ride support</div></div></div><button type="button" class="ghost" id="sideClose">✕</button></div>
   <button type="button" class="sideitem" data-side="customer" onclick="document.querySelectorAll('.view').forEach(x=>x.classList.toggle('active',x.id==='customer'));document.querySelectorAll('.navbtn[data-view]').forEach(x=>x.classList.toggle('active',x.dataset.view==='customer'));document.getElementById('sidemenu').classList.remove('show');document.getElementById('sideback').classList.remove('show')"><span>🏠</span><span>Customer Home</span></button>
   <button type="button" class="sideitem" data-side="driver" onclick="document.querySelectorAll('.view').forEach(x=>x.classList.toggle('active',x.id==='driver'));document.querySelectorAll('.navbtn[data-view]').forEach(x=>x.classList.toggle('active',x.dataset.view==='driver'));document.getElementById('sidemenu').classList.remove('show');document.getElementById('sideback').classList.remove('show')"><span>🚗</span><span>Driver Partner</span></button>
   <button class="sideitem" id="sideProfile"><span>👤</span><span>My Profile</span></button>
@@ -178,8 +185,8 @@ body.login-screen .login-gate{min-height:100dvh;background:#070707;color:#fff;di
 <div class="modal auth-modal-fixed" id="authModal"><div class="modalbox stack">
 <div class="row between"><h2>Assam Drive account</h2><button type="button" class="ghost" id="authModalClose" onclick="event.preventDefault();event.stopPropagation();var m=document.getElementById('authModal');m.classList.remove('show');m.style.display='none';m.style.pointerEvents='none'">✕</button></div>
 <div class="role" id="accountRoleChooser">
-<button type="button" id="roleCustomerBtn" class="role-entry customer-entry" onclick="event.preventDefault();event.stopPropagation();chooseRole('CUSTOMER')">👤<br><b>Customer</b><br><span class="small muted">Book rides & manage trips</span></button>
-<button type="button" id="roleDriverBtn" class="role-entry driver-entry" onclick="event.preventDefault();event.stopPropagation();chooseRole('DRIVER')">🚗<br><b>Driver</b><br><span class="small muted">Register, verify & drive</span></button>
+<button type="button" id="roleCustomerBtn" class="role-entry customer-entry">👤<br><b>Customer</b><br><span class="small muted">Book rides & manage trips</span></button>
+<button type="button" id="roleDriverBtn" class="role-entry driver-entry">🚗<br><b>Driver</b><br><span class="small muted">Register, verify & drive</span></button>
 </div>
 <div class="small muted" style="text-align:center">Choose your account type. Customer and Driver have separate registration, login and dashboards.</div>
 <div id="authForm"></div>
@@ -236,13 +243,35 @@ if(!Number.isFinite(+state.seq))state.seq=1001;
 if(!state.drivers.length)state.drivers.push(JSON.parse(JSON.stringify(defaults.drivers[0])));
 state.drivers.forEach(d=>{d.documents=Array.isArray(d.documents)?d.documents:[];d.checks=Array.isArray(d.checks)?d.checks:[];d.earn=Number.isFinite(+d.earn)?+d.earn:0;d.verification=d.verification||'PENDING';d.online=!!d.online;d.vehicle=d.vehicle||'BIKE';d.registration=d.registration||'';d.phone=d.phone||'';d.name=d.name||'Driver'});
 const $=id=>document.getElementById(id);
-document.body.classList.add('login-screen');
-$('menuBtn')?.setAttribute('hidden','');
-$('sidemenu')?.setAttribute('hidden','');
-$('sideback')?.setAttribute('hidden','');
-$('menuBtn')?.style.setProperty('display','none','important');
-$('sidemenu')?.style.setProperty('display','none','important');
-$('sideback')?.style.setProperty('display','none','important');
+function applyAuthShell(){
+  const logged=!!state.session;
+  const role=state.session?.role||'';
+  document.body.classList.toggle('login-screen',!logged);
+  document.body.classList.toggle('authenticated',logged);
+  const header=document.querySelector('header'), menu=$('menuBtn'), side=$('sidemenu'), back=$('sideback');
+  if(header) header.hidden=!logged;
+  if(menu) menu.hidden=!logged;
+  if(side) side.hidden=!logged;
+  if(back) back.hidden=!logged;
+  if(!logged){
+    closeSide();
+    if(menu) menu.style.removeProperty('display');
+    if(side) side.style.removeProperty('display');
+    if(back) back.style.removeProperty('display');
+  }
+  document.querySelectorAll('.navbtn[data-view]').forEach(btn=>{
+    const allowed=logged && btn.dataset.view===role.toLowerCase();
+    btn.hidden=!allowed;
+    btn.classList.toggle('active',allowed);
+  });
+  document.querySelectorAll('[data-side]').forEach(btn=>{
+    btn.hidden=!logged || btn.dataset.side!==role.toLowerCase();
+  });
+  const authBtn=$('authBtn'),logoutBtn=$('logoutBtn');
+  if(authBtn) authBtn.hidden=logged;
+  if(logoutBtn) logoutBtn.hidden=!logged;
+}
+applyAuthShell();
 window.__openCreateAccount=function(e){if(e){e.preventDefault();e.stopPropagation()}try{const sm=$('sidemenu'),sb=$('sideback');sm?.classList.remove('show');sb?.classList.remove('show');sm?.style.setProperty('display','none','important');sb?.style.setProperty('display','none','important');const m=$('authModal');if(m){m.classList.add('show');m.style.display='flex';m.style.pointerEvents='auto';m.setAttribute('aria-hidden','false')}chooseRole('CUSTOMER');gateSetStatus('Create your account with Name, mobile number, Gmail OTP and password.',true)}catch(err){console.error('Create Account error',err);const s=$('loginGateStatus');if(s)s.textContent='Please try again. App error: '+(err?.message||'unknown')}};
 async function syncCurrentUserToSupabase(){
  const u=currentUser();if(!u||!supabaseReady||!supabase)return;
@@ -274,24 +303,7 @@ function renderFare(){$('fare').textContent='₹'+Math.round(estimate());$('rout
 function render(){
  renderFare();
  const logged=!!state.session;
- const sm=$('sidemenu'), sb=$('sideback');
- if(!logged){
-   closeSide();
-   $('menuBtn')?.setAttribute('hidden','');
-   sm?.setAttribute('hidden','');
-   sb?.setAttribute('hidden','');
-   $('menuBtn')?.style.setProperty('display','none','important');
-   sm?.style.setProperty('display','none','important');
-   sb?.style.setProperty('display','none','important');
- }else{
-   $('menuBtn')?.removeAttribute('hidden');
-   sm?.removeAttribute('hidden');
-   sb?.removeAttribute('hidden');
-   $('menuBtn')?.style.removeProperty('display');
-   sm?.style.removeProperty('display');
-   sb?.style.removeProperty('display');
- }
- document.body.classList.toggle('login-screen',!logged);
+ applyAuthShell();
  $('loginGate').classList.toggle('active',!logged);
  $('customer').classList.toggle('active',logged&&state.session.role==='CUSTOMER');
  $('driver').classList.toggle('active',logged&&state.session.role==='DRIVER');
@@ -362,13 +374,14 @@ function nextAccountRole(){
   chooseRole(selectedAccountRole);
 }
 function openRoleChooser(){
-  $('sidemenu')?.classList.remove('show');$('sideback')?.classList.remove('show');
+  if(state.session){toast('You are already logged in');return}
+  closeSide();
   openModal('authModal');
   selectedAccountRole='';
   const form=$('authForm');
   if(form)form.innerHTML='<div class="small muted" style="text-align:center;margin-top:2px">Choose Customer or Driver above.</div>';
-  const cb=$('roleCustomerBtn'),db=$('roleDriverBtn');
-  cb?.classList.remove('selected');db?.classList.remove('selected');
+  $('roleCustomerBtn')?.classList.remove('selected');
+  $('roleDriverBtn')?.classList.remove('selected');
 }
 function chooseRole(role){
   selectedAccountRole=role;
@@ -524,9 +537,9 @@ authModal?.addEventListener('click',e=>{if(e.target===authModal)closeModal('auth
 
 $('createAccountBtn')?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();window.__openCreateAccount(e)},{capture:true});
 $('createAccountBtn')?.addEventListener('touchend',e=>{e.preventDefault();e.stopPropagation();window.__openCreateAccount(e)},{capture:true,passive:false});
-$('menuBtn')?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();openSide();});
-$('sideClose')?.addEventListener('click',closeSide);
-$('sideback')?.addEventListener('click',closeSide);
+$('menuBtn')?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();openSide()});
+$('sideClose')?.addEventListener('click',e=>{e.preventDefault();closeSide()});
+$('sideback')?.addEventListener('click',e=>{e.preventDefault();closeSide()});
 document.querySelectorAll('[data-side]').forEach(b=>b.addEventListener('click',()=>{const v=b.dataset.side;document.querySelectorAll('.navbtn[data-view]').forEach(x=>{x.classList.toggle('active',x.dataset.view===v)});document.querySelectorAll('.view').forEach(x=>x.classList.toggle('active',x.id===v));closeSide()}));
 $('sideProfile')?.addEventListener('click',()=>{closeSide();if(currentUser()){editProfile()}else{openModal('authModal');chooseRole('CUSTOMER')}});
 $('sidePrivacy')?.addEventListener('click',()=>{closeSide();showInfo('Privacy Policy','Assam Drive uses account, ride and location information only for providing the ride service, safety, support and required operations. Location sharing is limited to the active ride. Do not upload documents unless required for verification.')});
@@ -535,7 +548,12 @@ $('sideTerms')?.addEventListener('click',()=>{closeSide();showInfo('Terms & Cond
 $('sideCare')?.addEventListener('click',()=>{closeSide();showInfo('Customer Care','For help with account, booking, payment or ride issues, contact <b>assamridesupport@gmail.com</b>.')});
 $('sideAI')?.addEventListener('click',()=>{closeSide();showInfo('AI Customer Support','AI support can help with common booking, account and app questions. For payment disputes, safety matters or sensitive account issues, contact customer support directly.')});
 $('emailSupport')?.addEventListener('click',()=>{location.href='mailto:assamridesupport@gmail.com?subject=Assam%20Drive%20Customer%20Support'});
-$('logoutBtn').onclick=async()=>{if(supabase)await supabase.auth.signOut();state.session=null;state.drivers.forEach(d=>d.online=false);save();toast('Logged out')};
+$('logoutBtn').onclick=async()=>{
+  closeSide();closeModal('authModal');closeModal('driverModal');closeModal('profileModal');
+  if(supabase)await supabase.auth.signOut();
+  state.session=null;state.drivers.forEach(d=>d.online=false);save();
+  toast('Logged out successfully');
+};
 $('driverRegisterBtn').onclick=()=>{if(!state.session||state.session.role!=='DRIVER'){openModal('authModal');chooseRole('DRIVER');toast('Login/register as Driver first')}else{const d=currentUser();$('regName').value=d.name;$('regPhone').value=d.phone;$('regVehicle').value=d.vehicle;$('regRc').value=d.registration;openModal('driverModal')}};
 $('onlineBtn').onclick=()=>{const d=currentUser();if(!d||state.session.role!=='DRIVER'){openModal('authModal');chooseRole('DRIVER');return}if(d.verification!=='APPROVED'){toast('Admin approval is required before going online');return}d.online=!d.online;save();toast(d.online?'Driver is online':'Driver is offline')};
 $('bookBtn').onclick=book;$('locBtn').onclick=()=>startLocationWatch(true);$('routeBtn').onclick=calculateGoogleRoute;
@@ -655,15 +673,17 @@ async function initSupabaseAuth(){
    const role=data.session.user.user_metadata?.requested_role||pendingRole||state.session?.role||'CUSTOMER';
    localStorage.removeItem('assam_drive_pending_role');
    await establishSupabaseUser(role,data.session.user);
+ }else{
+   state.session=null;
  }
  supabase.auth.onAuthStateChange((event,session)=>{
-   if(session?.user&&!state.session){
+   if(session?.user){
      const pendingRole=localStorage.getItem('assam_drive_pending_role');
-     const role=session.user.user_metadata?.requested_role||pendingRole||'CUSTOMER';
+     const role=session.user.user_metadata?.requested_role||pendingRole||state.session?.role||'CUSTOMER';
      localStorage.removeItem('assam_drive_pending_role');
      establishSupabaseUser(role,session.user).then(()=>{closeModal('authModal');render()});
-   }else if(!session){
-     state.session=null;render();
+   }else{
+     state.session=null;closeSide();render();
    }
  });
  render();
