@@ -22,7 +22,7 @@ h1,h2,h3{margin:0 0 8px}h1{font-size:27px}h2{font-size:20px}h3{font-size:16px}.m
 @media(max-width:760px){main{padding:11px}.span3,.span4,.span6,.span8{grid-column:span 12}header{align-items:flex-start;flex-direction:column}nav{width:100%}.navbtn{flex:1}.map{height:250px}.vehicle span{padding:10px 4px;font-size:13px}.role{grid-template-columns:1fr}}
 
 /* Premium side menu + interaction safety */
-.menuBtn{display:none;background:#edf3f0;color:#087a52;padding:10px 12px;border-radius:12px;font-size:20px}
+.menuBtn{display:none;background:#edf3f0;color:#087a52;padding:10px 12px;border-radius:12px;font-size:20px;position:relative;z-index:25;pointer-events:auto}
 .sideback{position:fixed;inset:0;background:#10241d80;z-index:89;display:none;pointer-events:none}
 .sideback.show{display:block;pointer-events:auto}
 .sidemenu{position:fixed;top:0;right:0;height:100dvh;width:min(360px,92vw);background:#fff;z-index:90;pointer-events:none;box-shadow:-18px 0 45px #10241d30;transform:translateX(105%);transition:.22s;overflow:auto;padding:18px}
@@ -40,7 +40,7 @@ h1,h2,h3{margin:0 0 8px}h1{font-size:27px}h2{font-size:20px}h3{font-size:16px}.m
 <div class="app">
 <header>
 <div class="brand"><div class="logo">🚗</div><div>Assam Drive<div class="small muted">Ride booking • Assam</div></div></div>
-<button class="menuBtn" id="menuBtn" aria-label="Open menu">☰</button><nav>
+<button type="button" class="menuBtn" id="menuBtn" aria-label="Open menu" onclick="document.getElementById('sidemenu').classList.add('show');document.getElementById('sideback').classList.add('show')">☰</button><nav>
 <button class="navbtn active" data-view="customer">Customer</button>
 <button class="navbtn" data-view="driver">Driver</button>
 <button class="navbtn" data-view="admin">Admin</button>
@@ -48,12 +48,12 @@ h1,h2,h3{margin:0 0 8px}h1{font-size:27px}h2{font-size:20px}h3{font-size:16px}.m
 <button class="navbtn" id="logoutBtn" style="display:none">Logout</button>
 </nav>
 </header>
-<div class="sideback" id="sideback"></div>
+<div class="sideback" id="sideback" onclick="document.getElementById('sidemenu').classList.remove('show');this.classList.remove('show')"></div>
 <aside class="sidemenu" id="sidemenu" aria-label="Assam Drive menu">
-  <div class="sidehead"><div class="sidebrand"><div class="sideicon">🚗</div><div>Assam Drive<div class="small muted">Premium ride support</div></div></div><button class="ghost" id="sideClose">✕</button></div>
-  <button class="sideitem" data-side="customer"><span>🏠</span><span>Customer Home</span></button>
-  <button class="sideitem" data-side="driver"><span>🚗</span><span>Driver Partner</span></button>
-  <button class="sideitem" data-side="admin"><span>🛡️</span><span>Admin</span></button>
+  <div class="sidehead"><div class="sidebrand"><div class="sideicon">🚗</div><div>Assam Drive<div class="small muted">Premium ride support</div></div></div><button type="button" class="ghost" id="sideClose" onclick="document.getElementById('sidemenu').classList.remove('show');document.getElementById('sideback').classList.remove('show')">✕</button></div>
+  <button type="button" class="sideitem" data-side="customer" onclick="document.querySelectorAll('.view').forEach(x=>x.classList.toggle('active',x.id==='customer'));document.querySelectorAll('.navbtn[data-view]').forEach(x=>x.classList.toggle('active',x.dataset.view==='customer'));document.getElementById('sidemenu').classList.remove('show');document.getElementById('sideback').classList.remove('show')"><span>🏠</span><span>Customer Home</span></button>
+  <button type="button" class="sideitem" data-side="driver" onclick="document.querySelectorAll('.view').forEach(x=>x.classList.toggle('active',x.id==='driver'));document.querySelectorAll('.navbtn[data-view]').forEach(x=>x.classList.toggle('active',x.dataset.view==='driver'));document.getElementById('sidemenu').classList.remove('show');document.getElementById('sideback').classList.remove('show')"><span>🚗</span><span>Driver Partner</span></button>
+  <button type="button" class="sideitem" data-side="admin" onclick="document.querySelectorAll('.view').forEach(x=>x.classList.toggle('active',x.id==='admin'));document.querySelectorAll('.navbtn[data-view]').forEach(x=>x.classList.toggle('active',x.dataset.view==='admin'));document.getElementById('sidemenu').classList.remove('show');document.getElementById('sideback').classList.remove('show')"><span>🛡️</span><span>Admin</span></button>
   <button class="sideitem" id="sideProfile"><span>👤</span><span>My Profile</span></button>
   <button class="sideitem" id="sidePrivacy"><span>🔒</span><span>Privacy Policy</span></button>
   <button class="sideitem" id="sideAbout"><span>ℹ️</span><span>About Assam Drive</span></button>
