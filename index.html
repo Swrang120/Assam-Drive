@@ -51,6 +51,8 @@ h1,h2,h3{margin:0 0 8px}h1{font-size:27px}h2{font-size:20px}h3{font-size:16px}.m
 body.login-screen{background:#070707;color:#fff}
 body.login-screen header{display:none}
 body.login-screen main{padding:0}
+/* Never allow the authenticated app side-menu overlay to cover the public login screen. */
+body.login-screen .sidemenu,body.login-screen .sideback{display:none!important;pointer-events:none!important}
 body.login-screen .login-gate{min-height:100dvh;background:#070707;color:#fff;display:flex;align-items:center;justify-content:center;padding:28px 22px}
 .login-panel{width:min(430px,100%);display:flex;flex-direction:column;align-items:center;text-align:center}
 .login-logo{width:112px;height:112px;object-fit:contain;padding:5px;border-radius:32px;background:linear-gradient(#fff,#f4fbf7) padding-box,#087a52 border-box;border:2px solid transparent;box-shadow:0 18px 45px #0009,0 0 0 5px #087a5218;margin-bottom:24px}
@@ -264,6 +266,7 @@ function renderFare(){$('fare').textContent='₹'+Math.round(estimate());$('rout
 function render(){
  renderFare();
  const logged=!!state.session;
+ if(!logged){closeSide();closeModal('authModal');}
  document.body.classList.toggle('login-screen',!logged);
  $('loginGate').classList.toggle('active',!logged);
  $('customer').classList.toggle('active',logged&&state.session.role==='CUSTOMER');
