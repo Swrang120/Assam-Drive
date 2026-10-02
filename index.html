@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
+<link rel="stylesheet" href="./auth/auth-ui.css">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#087a52">
@@ -112,9 +113,9 @@ body.login-screen .login-gate{position:relative;z-index:1;min-height:100dvh;back
   <div class="login-subtitle">Safe, simple rides across Assam.</div>
   <div class="small" style="color:#71857b;margin-bottom:12px">New user? Create Account • Existing user? Login • Forgot password? Get OTP</div>
   <div class="login-actions premium-actions">
-    <button type="button" class="primary login-main-btn" id="loginStartBtn" onclick="window.assamDriveAuth('LOGIN')">🔐 Login <span class="small" style="opacity:.8">• Existing User</span></button>
-    <button type="button" class="create-account-btn login-main-btn" id="createAccountBtn" onclick="window.assamDriveAuth('SIGNUP')">✨ Create Account <span class="small" style="opacity:.75">• New User</span></button>
-    <button type="button" class="login-link-btn" id="forgotPasswordBtn" onclick="window.assamDriveForgotPassword()">Forgot Password? <span class="small">• Get OTP</span></button>
+    <button type="button" class="primary login-main-btn" id="loginStartBtn" onclick="AssamDriveAuth.open('LOGIN')">🔐 Login <span class="small" style="opacity:.8">• Existing User</span></button>
+    <button type="button" class="create-account-btn login-main-btn" id="createAccountBtn" onclick="AssamDriveCreateAccount.open()">✨ Create Account <span class="small" style="opacity:.75">• New User</span></button>
+    <button type="button" class="login-link-btn" id="forgotPasswordBtn" onclick="AssamDriveRecovery.open()">Forgot Password? <span class="small">• Get OTP</span></button>
   </div>
   <div class="login-note"><span>●</span> Customer & Driver accounts are separate</div>
   <div class="login-terms">By continuing, you agree to Assam Drive's<br><u>Terms of Service</u> and <u>Privacy Policy</u></div>
@@ -215,6 +216,10 @@ body.login-screen .login-gate{position:relative;z-index:1;min-height:100dvh;back
 <div class="toast" id="toast"></div><div class="click-debug" id="clickDebug">Assam Drive ready</div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="./auth/auth-session.js"></script>
+<script src="./auth/login.js"></script>
+<script src="./auth/create-account.js"></script>
+<script src="./auth/forgot-password.js"></script>
 <script>
 /* Assam Drive auth click bridge — keeps mobile auth buttons callable even if inline handlers are restricted. */
 window.assamDriveAuth=function(intent){
