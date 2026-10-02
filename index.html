@@ -203,7 +203,7 @@ ontouchend="event.preventDefault();this.click()">✨ Create Account</button></di
 </div></div>
 
 <div class="modal" id="profileModal"><div class="modalbox stack">
-<div class="row between"><h2>Edit profile</h2><button class="ghost" onclick="closeModal('profileModal')">✕</button></div>
+<div class="row between"><div><h2>Edit profile</h2><div class="small muted">Update your name and profile photo.</div></div><button class="ghost" type="button" onclick="closeModal('profileModal')">✕</button></div>
 <div class="field"><label>Name</label><input id="profileName"></div><div class="field"><label>Phone</label><input id="profilePhone" inputmode="tel" readonly><div class="small muted">Mobile number is tied to OTP login; changing it requires a new OTP verification.</div></div><div class="field"><label>Profile photo</label><input id="profilePhoto" type="file" accept="image/*"></div>
 <button class="primary" onclick="saveProfile()">Save profile</button><div class="small muted">Customer can update name/photo later. Production backend should audit sensitive phone-number changes.</div>
 </div></div>
@@ -242,7 +242,12 @@ async function syncCurrentUserToSupabase(){
   if(q.error)console.warn('Supabase profile sync:',q.error.message);
  }catch(e){console.warn('Supabase sync failed',e)}
 }
-const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){console.warn('Local save failed',e)}render();syncCurrentUserToSupabase()};
+const save=()=>{
+ try{localStorage.setItem(KEY,JSON.stringify(state))}
+ catch(e){console.warn('Local save failed',e);toast('Local storage is full. Please use a smaller profile photo.')}
+ try{render()}catch(e){console.error('Render failed',e);const d=$('clickDebug');if(d){d.textContent='App error: '+(e?.message||'Render failed');d.style.display='block';d.style.background='#a61e1e'}}
+ syncCurrentUserToSupabase();
+};
 function toast(x){const t=$('toast');t.textContent=x;t.style.display='block';clearTimeout(window.__toast);window.__toast=setTimeout(()=>t.style.display='none',2300)}
 function openModal(id){const el=$(id);if(!el)return;el.classList.add('show');el.style.display='flex';el.style.pointerEvents='auto';} function closeModal(id){const el=$(id);if(!el)return;el.classList.remove('show');el.style.display='none';el.style.pointerEvents='none';}
 function openSide(){ $('sidemenu')?.classList.add('show'); $('sideback')?.classList.add('show') }
@@ -268,7 +273,7 @@ function render(){
  $('currentRide').innerHTML=ar&&state.session&&state.session.role==='CUSTOMER'?rideCustomer(ar):'<div class="muted">No active ride.</div>';
  $('history').innerHTML=state.rides.filter(r=>!['SEARCHING','DRIVER_ASSIGNED','OTP_PENDING','RIDE_STARTED'].includes(r.status)).slice().reverse().map(r=>'<div class="ride"><div class="ride-title"><b>'+r.vehicle+' • '+esc(r.pickup)+' → '+esc(r.destination)+'</b><span class="pill '+(r.status==='COMPLETED'?'ok':'bad')+'">'+r.status+'</span></div><div class="small muted">₹'+r.fare+' • '+new Date(r.created).toLocaleString()+'</div></div>').join('')||'<div class="muted">No rides yet.</div>';
  const d=state.drivers[0];$('driverStatus').textContent=d.online?'Online':'Offline';$('onlineBtn').textContent=d.online?'Go offline':'Go online';$('driverEarn').textContent='₹'+d.earn;$('driverVerify').textContent=d.verification||'PENDING';
- $('driverProfile').innerHTML=state.session&&state.session.role==='DRIVER'?'<div class="row"><img class="avatar" src="'+(d.photo||'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2262%22 height=%2262%22%3E%3Crect width=%2262%22 height=%2262%22 fill=%22%23e9f1ed%22/%3E%3Ctext x=%2231%22 y=%2238%22 text-anchor=%22middle%22 font-size=%2226%22%3E🚗%3C/text%3E%3C/svg%3E')+'"><div><b>'+esc(d.name)+'</b><div class="small muted">'+esc(d.phone)+'</div><div class="small">'+d.vehicle+' • '+esc(d.registration)+'</div></div></div>':'<div class="muted">Login/register as Driver.</div>';
+ $('driverProfile').innerHTML=state.session&&state.session.role==='DRIVER'?'<div class="row"><img class="avatar" src="'+(d.photo||'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2262%22 height=%2262%22%3E%3Crect width=%2262%22 height=%2262%22 fill=%22%23e9f1ed%22/%3E%3Ctext x=%2231%22 y=%2238%22 text-anchor=%22middle%22 font-size=%2226%22%3E🚗%3C/text%3E%3C/svg%3E')+'"><div><b>'+esc(d.name)+'</b><div class="small muted">'+esc(d.phone)+'</div><div class="small">'+d.vehicle+' • '+esc(d.registration)+'</div></div></div><button class="secondary" type="button" onclick="editProfile()">Edit profile</button>':'<div class="muted">Login/register as Driver.</div>';
  const req=state.rides.find(r=>r.status==='SEARCHING');$('driverRequest').innerHTML=state.session&&state.session.role==='DRIVER'&&req&&d.online?rideRequest(req):'<div class="muted">'+(state.session&&state.session.role==='DRIVER'?(d.online?'Waiting for ride requests…':'Go online to receive requests.'):'Login/register as Driver to continue.')+'</div>';
  const dr=state.rides.find(r=>r.driverId===d.id&&['DRIVER_ASSIGNED','OTP_PENDING','RIDE_STARTED'].includes(r.status));$('driverRide').innerHTML=dr?rideDriver(dr):'';
  $('driverCard').innerHTML=d.verification==='APPROVED'?'<div class="idcard"><div class="row between"><b>ASSAM DRIVE • DRIVER ID</b><span class="pill ok">VERIFIED</span></div><div class="row" style="margin-top:12px"><img class="avatar" src="'+(d.photo||'')+'"><div><h3>'+esc(d.name)+'</h3><div>'+d.vehicle+' • '+esc(d.registration)+'</div><div class="idnum">'+d.id+'</div></div></div><div class="small muted" style="margin-top:10px">Generated automatically after admin approval. Carrying this card does not replace official licence/vehicle documents.</div></div>':'<div class="muted">ID card will be generated automatically after approval.</div>';
@@ -427,8 +432,29 @@ async function verifyAuth(role,ep){
  showSetPassword(role,'PHONE',p);
 }
 function establishSupabaseUser(role,user,profile={}){if(!user)return;const phone=profile.phone||user.user_metadata?.mobile_number||user.phone||'';const name=profile.name||user.user_metadata?.full_name||user.user_metadata?.name||(role==='CUSTOMER'?'New Customer':'New Driver');if(role==='CUSTOMER'){let u=state.customers.find(x=>x.id===user.id)||state.customers.find(x=>x.phone===phone);if(!u){u={id:user.id,name,phone,photo:''};state.customers.push(u)}else{u.id=user.id;u.name=name||u.name;u.phone=phone||u.phone}state.session={role:'CUSTOMER',id:u.id}}else{let d=state.drivers.find(x=>x.id===user.id)||state.drivers.find(x=>x.phone===phone);if(!d){d={id:user.id,name,phone,vehicle:'BIKE',registration:'',verified:false,verification:'PENDING',online:false,earn:0,photo:'',documents:[],checks:[]};state.drivers.push(d)}else{d.id=user.id;d.name=name||d.name;d.phone=phone||d.phone}state.session={role:'DRIVER',id:d.id}}}
-function editProfile(){const u=currentUser();$('profileName').value=u.name;$('profilePhone').value=u.phone;openModal('profileModal')}
-function saveProfile(){const u=currentUser();if(!u)return;u.name=$('profileName').value.trim()||u.name;const f=$('profilePhoto').files[0];if(f){const rd=new FileReader();rd.onload=()=>{u.photo=rd.result;closeModal('profileModal');save()};rd.readAsDataURL(f)}else{closeModal('profileModal');save()}toast('Profile updated')}
+function editProfile(){
+ const u=currentUser();
+ if(!u){toast('Please login first');return}
+ $('profileName').value=u.name||'';
+ $('profilePhone').value=u.phone||'';
+ const ph=$('profilePhoto');if(ph)ph.value='';
+ openModal('profileModal');
+}
+function saveProfile(){
+ const u=currentUser();
+ if(!u){closeModal('profileModal');toast('Please login first');return}
+ const name=($('profileName').value||'').trim();
+ if(name)u.name=name;
+ const f=$('profilePhoto')?.files?.[0];
+ const finish=()=>{closeModal('profileModal');save();toast('Profile updated successfully')};
+ if(f){
+  if(!f.type.startsWith('image/')){toast('Please select an image');return}
+  const rd=new FileReader();
+  rd.onload=()=>{u.photo=String(rd.result||'');finish()};
+  rd.onerror=()=>toast('Profile photo could not be read');
+  rd.readAsDataURL(f);
+ }else finish();
+}
 function submitDriverRegistration(){const d=currentUser();if(!d||state.session.role!=='DRIVER'){toast('Login as Driver first');return}d.name=$('regName').value.trim()||d.name;d.phone=$('regPhone').value.trim()||d.phone;d.vehicle=$('regVehicle').value;d.registration=$('regRc').value.trim();d.verification='UNDER_REVIEW';d.online=false;d.documents=[];['regDl','regId','regRcDoc','regInsurance','regPuc','regPermit','regVehiclePhoto'].forEach(id=>{const f=$(id).files[0];if(f)d.documents.push($(id).previousElementSibling.textContent||id)});d.checks=runPrecheck();closeModal('driverModal');save();toast('Documents submitted for admin verification')}
 function runPrecheck(){const d=currentUser(),checks=[];if(!d.name)checks.push('name missing');if(!d.registration)checks.push('vehicle registration missing');if($('regDl').files.length===0)checks.push('licence missing');if($('regRcDoc').files.length===0)checks.push('RC missing');if($('regInsurance').files.length===0)checks.push('insurance missing');if($('regPuc').files.length===0)checks.push('PUC missing');return checks.length?checks:['basic fields present'];}
 function approveDriver(id){const d=state.drivers.find(x=>x.id===id);if(!d)return;d.verification='APPROVED';d.verified=true;d.online=false;if(!d.id.startsWith('DRV-'))d.id=d.id;save();toast('Driver approved; ID card generated')}
