@@ -20,6 +20,18 @@ create table if not exists public.driver_documents(
  reviewed_at timestamptz,
  created_at timestamptz not null default now()
 );
+alter table public.driver_documents
+ add column if not exists original_filename text,
+ add column if not exists mime_type text,
+ add column if not exists file_size bigint,
+ add column if not exists sha256 text,
+ add column if not exists ocr_text text,
+ add column if not exists extracted_name text,
+ add column if not exists name_match_score numeric(5,2),
+ add column if not exists authenticity_status text not null default 'PENDING',
+ add column if not exists review_notes text,
+ add column if not exists reviewed_by uuid,
+ add column if not exists reviewed_at timestamptz;
 alter table public.driver_documents enable row level security;
 drop policy if exists driver_documents_owner_read on public.driver_documents;
 create policy driver_documents_owner_read on public.driver_documents for select using(auth.uid()=driver_id);
