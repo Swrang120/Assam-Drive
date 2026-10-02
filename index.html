@@ -67,7 +67,7 @@ body.login-screen .login-gate{min-height:100dvh;background:#070707;color:#fff;di
 .login-alt{display:grid;grid-template-columns:1fr 1fr;gap:16px;width:100%}
 .login-alt button{height:68px;border:1px solid #55515f;border-radius:20px;background:#17151b;color:#fff;font-size:22px}
 .login-alt button span{display:block;font-size:13px;margin-top:4px;color:#aaa6b0}
-.login-terms{margin-top:26px;color:#77737d;font-size:12px;line-height:1.6}.login-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;margin-top:12px;position:relative;z-index:5;pointer-events:auto}.login-actions button,.login-alt button,.login-driver,.login-otp{position:relative;z-index:6;pointer-events:auto;touch-action:manipulation}.login-actions button{padding:15px;border-radius:16px;font-weight:800}.login-password{width:100%;padding:17px;border:1px solid #39353f;border-radius:18px;background:#17151b;color:#fff;outline:0;font-size:16px;margin-bottom:10px}.login-password::placeholder{color:#77737d}.login-link{background:transparent;color:#c8c3cc;border:0;font-weight:750;padding:10px} 
+.login-terms{margin-top:26px;color:#77737d;font-size:12px;line-height:1.6}.login-actions{display:grid;grid-template-columns:1fr 1fr;gap:12px;width:100%;margin-top:14px;position:relative;z-index:40;pointer-events:auto}.login-actions button,.login-alt button,.login-driver,.login-otp{position:relative;z-index:50;pointer-events:auto;touch-action:manipulation}.login-actions button{padding:16px 12px;border-radius:17px;font-weight:850;min-height:56px}.create-account-btn{color:#fff!important;background:linear-gradient(135deg,#087a52 0%,#12a66b 52%,#d9a441 100%)!important;border:1px solid #e7c56e!important;box-shadow:0 10px 28px #087a524d,0 0 0 1px #ffffff22 inset;position:relative!important;overflow:hidden;isolation:isolate}.create-account-btn:before{content:"";position:absolute;inset:-80% -30%;background:linear-gradient(115deg,transparent 40%,#ffffff45 50%,transparent 60%);transform:translateX(-55%);transition:transform .65s ease;z-index:-1}.create-account-btn:hover:before,.create-account-btn:active:before{transform:translateX(55%)}.create-account-btn:active{transform:scale(.98)}.login-panel{position:relative;z-index:10;pointer-events:auto}.login-gate{position:relative;z-index:1;pointer-events:auto}.login-password{width:100%;padding:17px;border:1px solid #39353f;border-radius:18px;background:#17151b;color:#fff;outline:0;font-size:16px;margin-bottom:10px}.login-password::placeholder{color:#77737d}.login-link{background:transparent;color:#c8c3cc;border:0;font-weight:750;padding:10px} 
 .login-terms u{color:#aaa6b0}
 .login-driver{margin-top:20px;background:transparent;color:#d8d4dc;border:0;font-weight:750}
 .login-status{min-height:22px;margin-top:12px;font-size:13px;color:#a8d9c3}
@@ -108,7 +108,7 @@ body.login-screen .login-gate{min-height:100dvh;background:#070707;color:#fff;di
 <button class="login-otp" id="loginGateOtp" type="button">GET EMAIL OTP</button>
 <div class="login-status" id="loginGateStatus"></div>
 <div class="small" style="color:#77737d;margin-top:6px">Email OTP is enabled for free testing. Mobile SMS OTP will be activated later when an SMS provider is connected.</div>
-<div class="login-actions"><button type="button" class="secondary" id="loginPasswordBtn">🔐 Login with Password</button><button type="button" class="ghost" id="createAccountBtn">🆕 Create Account</button></div><div class="login-or">OR CONTINUE WITH</div>
+<div class="login-actions"><button type="button" class="secondary" id="loginPasswordBtn">🔐 Login with Password</button><button type="button" class="create-account-btn" id="createAccountBtn" onclick="window.__openCreateAccount(event)">✨ Create Account</button></div><div class="login-or">OR CONTINUE WITH</div>
 <div class="login-alt">
 <button type="button" onclick="gateGoogleLogin()">G <span>Google</span></button>
 <button type="button" onclick="gateEmailLogin()">✉ <span>Email</span></button>
@@ -229,6 +229,7 @@ if(!Number.isFinite(+state.seq))state.seq=1001;
 if(!state.drivers.length)state.drivers.push(JSON.parse(JSON.stringify(defaults.drivers[0])));
 state.drivers.forEach(d=>{d.documents=Array.isArray(d.documents)?d.documents:[];d.checks=Array.isArray(d.checks)?d.checks:[];d.earn=Number.isFinite(+d.earn)?+d.earn:0;d.verification=d.verification||'PENDING';d.online=!!d.online;d.vehicle=d.vehicle||'BIKE';d.registration=d.registration||'';d.phone=d.phone||'';d.name=d.name||'Driver'});
 const $=id=>document.getElementById(id);
+window.__openCreateAccount=function(e){if(e){e.preventDefault();e.stopPropagation()}try{openModal('authModal');chooseRole('CUSTOMER');gateSetStatus('Create your account with Name, mobile number, Gmail OTP and password.',true)}catch(err){console.error('Create Account error',err);const s=$('loginGateStatus');if(s)s.textContent='Please try again. App error: '+(err?.message||'unknown')}};
 async function syncCurrentUserToSupabase(){
  const u=currentUser();if(!u||!supabaseReady||!supabase)return;
  try{
@@ -423,7 +424,7 @@ $('loginGateOtp').onclick=gateSendOtp;
 $('loginGateEmail').addEventListener('input',()=>{const email=$('loginGateEmail').value.trim();$('loginGateOtp').classList.toggle('ready',/^\S+@\S+\.\S+$/.test(email));});
 $('authBtn').onclick=()=>{openModal('authModal');chooseRole(state.session?.role||'CUSTOMER')};
 $('loginPasswordBtn')?.addEventListener('click',()=>{openModal('authModal');openPasswordLogin('CUSTOMER','EMAIL')});
-$('createAccountBtn')?.addEventListener('click',(e)=>{e.preventDefault();e.stopPropagation();openModal('authModal');chooseRole('CUSTOMER');gateSetStatus('Create your account with Name, mobile number, Gmail OTP and password.',true)});
+$('createAccountBtn')?.addEventListener('click',window.__openCreateAccount);
 $('menuBtn')?.addEventListener('click',openSide);
 $('sideClose')?.addEventListener('click',closeSide);
 $('sideback')?.addEventListener('click',closeSide);
