@@ -1,4 +1,4 @@
-name: Deploy Assam Drive to GitHub Pages
+name: Deploy Assam Drive to GitHub Pages (Live)
 
 on:
   push:
