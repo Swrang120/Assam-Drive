@@ -85,6 +85,30 @@ body.login-screen .login-gate{position:relative;z-index:1;min-height:100dvh;back
 .login-terms{margin-top:25px;color:#56645e;font-size:10px;line-height:1.6}
 .login-status{margin-top:10px;font-size:12px;color:#ffb5b5}
 @media(max-width:760px){body.login-screen .login-gate{padding:24px 18px}.login-logo{width:92px;height:92px}.login-brand{font-size:28px}.login-title{margin-top:32px}}
+
+/* LOGIN GATE TOUCH SAFETY: direct links must stay above decorative/overlay layers */
+#loginGate{
+  position:relative !important;
+  z-index:2147483647 !important;
+  pointer-events:auto !important;
+  isolation:isolate !important;
+}
+#loginGate .login-panel,
+#loginGate .login-actions,
+#loginGate .login-actions a{
+  position:relative !important;
+  z-index:2147483647 !important;
+  pointer-events:auto !important;
+}
+#loginGate .login-actions a{
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  text-decoration:none !important;
+  cursor:pointer !important;
+  touch-action:manipulation !important;
+  -webkit-tap-highlight-color:transparent !important;
+}
 </style>
 </head>
 <body>
