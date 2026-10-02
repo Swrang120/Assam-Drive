@@ -242,6 +242,7 @@ begin
  select dp.id into chosen from driver_profiles dp
  where dp.vehicle_type=p_vehicle and dp.verified=true and dp.online=true and dp.last_seen_at>now()-interval '90 seconds'
  and dp.current_lat is not null and dp.current_lng is not null
+ and ((dp.current_lat-p_pickup_lat)^2 + ((dp.current_lng-p_pickup_lng)*cos(radians(p_pickup_lat)))^2) < 0.0036
  order by ((dp.current_lat-p_pickup_lat)^2 + ((dp.current_lng-p_pickup_lng)*cos(radians(p_pickup_lat)))^2)
  limit 1;
  insert into rides(customer_id,driver_id,vehicle_type,pickup_text,destination_text,pickup_lat,pickup_lng,destination_lat,destination_lng,distance_km,duration_minutes,fare,status,created_at)
