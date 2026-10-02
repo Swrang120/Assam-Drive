@@ -1,3 +1,15 @@
+
+
+insert into storage.buckets(id,name,public) values('driver-documents','driver-documents',false)
+on conflict(id) do update set public=false;
+
+drop policy if exists driver_docs_storage_insert on storage.objects;
+create policy driver_docs_storage_insert on storage.objects for insert to authenticated
+with check(bucket_id='driver-documents' and (storage.foldername(name))[1]=auth.uid()::text);
+
+drop policy if exists driver_docs_storage_read on storage.objects;
+create policy driver_docs_storage_read on storage.objects for select to authenticated
+using(bucket_id='driver-documents' and (storage.foldername(name))[1]=auth.uid()::text);
 -- Assam Drive production ride backend v3
 -- Run after 001 and 002. Safe to re-run.
 
