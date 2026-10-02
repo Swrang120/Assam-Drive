@@ -118,7 +118,7 @@ body.login-screen .login-gate{min-height:100dvh;background:
   <div class="login-subtitle">Safe, simple rides across Assam.</div>
   <div class="login-actions premium-actions">
     <button type="button" class="primary login-main-btn" id="loginStartBtn" onclick="document.getElementById('authModal')?.classList.add('show');if(typeof openRoleChooser==='function'){openRoleChooser('LOGIN')}">🔐 Sign In</button>
-    <button type="button" class="create-account-btn login-main-btn" id="createAccountBtn" onclick="openRoleChooser('SIGNUP')">✨ Sign Up / Create Account</button>
+    <button type="button" class="create-account-btn login-main-btn" id="createAccountBtn" onclick="openRoleChooser('SIGNUP')">✨ Create Account</button>
     <button type="button" class="login-link-btn" id="forgotPasswordBtn" onclick="openForgotPassword()">Forgot Password?</button>
   </div>
   <div class="login-note"><span>●</span> Customer & Driver accounts are separate</div>
@@ -366,6 +366,7 @@ function openPasswordLogin(role,mode='PHONE'){
 }
 let selectedAccountRole='';
 let authIntent='BOTH';
+let passwordRecoveryOtpPending=false;
 function selectAccountRole(role){
   selectedAccountRole=role;
   const cb=$('roleCustomerBtn'),db=$('roleDriverBtn'),next=$('roleNextBtn');
@@ -458,15 +459,39 @@ async function setAccountPassword(role,mode,ei,en='',ep=''){
 function openForgotPassword(){
   if(state.session){toast('You are already logged in');return}
   closeSide();openModal('authModal');
-  $('authForm').innerHTML='<div class="stack"><div class="notice"><b>🔑 Forgot Password</b><br>Enter the Gmail/email used for your Assam Drive account. We will send a secure reset link.</div><div class="field"><label>Gmail / Email address</label><input id="recoveryEmail" type="email" autocomplete="email" placeholder="you@gmail.com"></div><button class="primary" type="button" onclick="sendPasswordReset()">Send Reset Link</button><button class="ghost" type="button" onclick="openRoleChooser(\'LOGIN\')">← Back to Sign In</button></div>';
+  passwordRecoveryOtpPending=false;
+  $('authForm').innerHTML='<div class="stack"><div class="notice"><b>🔑 Forgot Password</b><br>Enter the Gmail/email linked to your Assam Drive account. We will send a one-time OTP through Supabase.</div><div class="field"><label>Gmail / Email address</label><input id="recoveryEmail" type="email" autocomplete="email" placeholder="you@gmail.com"></div><button class="primary" type="button" onclick="sendPasswordReset()">Send OTP</button><button class="ghost" type="button" onclick="openRoleChooser(\'LOGIN\')">← Back to Sign In</button></div>';
 }
 async function sendPasswordReset(){
   if(!supabaseReady||!supabase){toast('Login service is unavailable.');return}
   const email=($('recoveryEmail')?.value||'').trim().toLowerCase();
   if(!/^\S+@\S+\.\S+$/.test(email)){toast('Enter a valid Gmail/email address');return}
-  const {error}=await supabase.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
+  passwordRecoveryOtpPending=true;
+  localStorage.setItem('assam_drive_password_recovery','1');
+  const {error}=await supabase.auth.signInWithOtp({
+    email,
+    options:{shouldCreateUser:false}
+  });
+  if(error){
+    passwordRecoveryOtpPending=false;
+    localStorage.removeItem('assam_drive_password_recovery');
+    toast(error.message);
+    return;
+  }
+  $('authForm').innerHTML='<div class="stack"><div class="success">OTP sent ✓</div><div class="field"><label>Enter Gmail OTP</label><input id="recoveryOtp" maxlength="6" inputmode="numeric" autocomplete="one-time-code" class="login-password" placeholder="6-digit OTP"></div><button class="primary" type="button" onclick="verifyPasswordResetOtp()">Verify OTP</button><button class="ghost" type="button" onclick="openForgotPassword()">Change email</button></div>';
+}
+async function verifyPasswordResetOtp(){
+  if(!supabaseReady||!supabase){toast('Login service is unavailable.');return}
+  const email=($('recoveryEmail')?.value||'').trim().toLowerCase();
+  const token=($('recoveryOtp')?.value||'').replace(/\D/g,'');
+  if(!/^\S+@\S+\.\S+$/.test(email)){toast('Enter a valid Gmail/email address');return}
+  if(token.length<4){toast('Enter the OTP from Gmail');return}
+  passwordRecoveryOtpPending=true;
+  localStorage.setItem('assam_drive_password_recovery','1');
+  const {data,error}=await supabase.auth.verifyOtp({email,token,type:'email'});
   if(error){toast(error.message);return}
-  $('authForm').innerHTML='<div class="stack"><div class="success">Reset link sent ✓</div><div class="notice">Check Gmail Inbox and Spam/Promotions, then open the reset link to choose a new password.</div><button class="primary" type="button" onclick="openRoleChooser(\'LOGIN\')">Back to Sign In</button></div>';
+  if(!data?.session){toast('OTP verified, but a secure session was not created. Please try again.');return}
+  showPasswordRecovery();
 }
 function showPasswordRecovery(){
   openModal('authModal');
@@ -479,7 +504,12 @@ async function finishPasswordRecovery(){
   if(p!==q){toast('Passwords do not match');return}
   const {error}=await supabase.auth.updateUser({password:p});
   if(error){toast(error.message);return}
-  closeModal('authModal');toast('Password updated successfully. You can sign in now.');
+  passwordRecoveryOtpPending=false;
+  localStorage.removeItem('assam_drive_password_recovery');
+  await supabase.auth.signOut();
+  state.session=null;
+  render();
+  $('authForm').innerHTML='<div class="stack"><div class="success">Password updated successfully ✓</div><div class="notice">Your password has been changed. Sign in with your Gmail and new password.</div><button class="primary" type="button" onclick="openPasswordLogin(\'CUSTOMER\',\'EMAIL\')">🔐 Sign In</button></div>';
 }
 function normalizePhone(raw){
  const digits=(raw||'').replace(/\D/g,'');
@@ -702,6 +732,11 @@ async function initSupabaseAuth(){
     supabase.auth.onAuthStateChange((event,session)=>{
       if(event==='PASSWORD_RECOVERY'){showPasswordRecovery();return}
       if(session?.user){
+        if(localStorage.getItem('assam_drive_password_recovery')==='1' || passwordRecoveryOtpPending){
+          passwordRecoveryOtpPending=true;
+          showPasswordRecovery();
+          return;
+        }
         const pendingRole=localStorage.getItem('assam_drive_pending_role');
         const role=session.user.user_metadata?.requested_role||pendingRole||state.session?.role||'CUSTOMER';
         localStorage.removeItem('assam_drive_pending_role');
