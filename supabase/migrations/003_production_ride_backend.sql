@@ -362,3 +362,35 @@ create index if not exists driver_presence_idx on public.driver_profiles(vehicle
 create index if not exists rides_customer_idx on public.rides(customer_id,created_at desc);
 create index if not exists rides_driver_idx on public.rides(driver_id,status,created_at desc);
 create index if not exists ride_location_idx on public.ride_location_updates(ride_id,recorded_at desc);
+
+
+create or replace function public.get_driver_ride_queue()
+returns setof rides language sql security definer set search_path=public as $$
+ select r.* from rides r
+ join driver_profiles d on d.id=auth.uid()
+ where r.status='SEARCHING' and r.driver_id is null and r.vehicle_type=d.vehicle_type
+ and d.verified=true and d.online=true and d.last_seen_at>now()-interval '90 seconds'
+ and (d.current_lat is null or r.pickup_lat is null or ((d.current_lat-r.pickup_lat)^2 + ((d.current_lng-r.pickup_lng)*cos(radians(r.pickup_lat)))^2) < 0.0036)
+ order by r.created_at asc limit 20
+$$;
+
+create or replace function public.claim_ride(p_ride_id bigint)
+returns rides language plpgsql security definer set search_path=public as $$
+declare uid uuid:=auth.uid(); r rides%rowtype; d driver_profiles%rowtype; otp text;
+begin
+ select * into d from driver_profiles where id=uid for update;
+ if not found or not d.verified or not d.online then raise exception 'Driver is not approved/online'; end if;
+ select * into r from rides where id=p_ride_id for update;
+ if not found or r.status<>'SEARCHING' or r.driver_id is not null or r.vehicle_type<>d.vehicle_type then raise exception 'Ride is no longer available'; end if;
+ if d.current_lat is not null and r.pickup_lat is not null and ((d.current_lat-r.pickup_lat)^2 + ((d.current_lng-r.pickup_lng)*cos(radians(r.pickup_lat)))^2)>0.0036 then raise exception 'Ride is outside service range'; end if;
+ otp:=lpad(floor(random()*10000)::int::text,4,'0');
+ update rides set driver_id=uid,status='OTP_PENDING',accepted_at=now(),driver_phone_snapshot=(select phone from profiles where id=uid) where id=p_ride_id returning * into r;
+ insert into ride_otp(ride_id,otp_hash,customer_otp,expires_at) values(r.id,encode(digest(otp,'sha256'),'hex'),otp,now()+interval '10 minutes')
+ on conflict(ride_id) do update set otp_hash=excluded.otp_hash,customer_otp=excluded.customer_otp,attempts=0,expires_at=excluded.expires_at,verified_at=null;
+ insert into ride_status_history(ride_id,status,actor_id) values(r.id,'OTP_PENDING',uid);
+ insert into notifications(user_id,type,title,body,data) values(r.customer_id,'RIDE_ASSIGNED','Driver assigned','Your ride is assigned. OTP: '||otp,jsonb_build_object('ride_id',r.id,'otp',otp));
+ return r;
+end $$;
+
+grant execute on function public.get_driver_ride_queue() to authenticated;
+grant execute on function public.claim_ride(bigint) to authenticated;
