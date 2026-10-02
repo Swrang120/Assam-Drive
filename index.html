@@ -305,42 +305,65 @@ function openPasswordLogin(role,mode='PHONE'){
  $('authForm').innerHTML=passwordLoginForm(role,mode);
 }
 function chooseRole(role){
- $('authForm').innerHTML='<div class="stack"><div class="notice"><b>'+ (role==='DRIVER'?'Driver':'Customer') +' account</b><br>Create your account with OTP verification. After OTP verification, you will set a password for future login.</div><button class="primary" type="button" onclick="startOtpSignup(\''+role+'\')">📱 Create account with Mobile OTP</button><button class="secondary" type="button" onclick="openPasswordLogin(\''+role+'\',\'PHONE\')">🔐 Login with Mobile + Password</button><button class="secondary" type="button" onclick="openPasswordLogin(\''+role+'\',\'EMAIL\')">✉️ Login with Gmail/Email + Password</button><button class="ghost" type="button" onclick="startEmailSignup(\''+role+'\')">Create account with Email OTP</button></div>';
+ $('authForm').innerHTML='<div class="stack"><div class="notice"><b>'+ (role==='DRIVER'?'Driver':'Customer') +' account</b><br>Create your account with Name + Mobile number, verify your Gmail with OTP, then create a password.</div><button class="primary" type="button" onclick="startAccountSignup(\''+role+'\')">🆕 Create Account</button><button class="secondary" type="button" onclick="openPasswordLogin(\''+role+'\',\'EMAIL\')">🔐 Login with Gmail + Password</button></div>';
 }
-function startOtpSignup(role){
- $('authForm').innerHTML='<div class="stack"><div class="field"><label>Mobile number</label><div class="login-phone"><div class="country">+91⌄</div><input id="authPhone" inputmode="tel" autocomplete="tel" placeholder="10-digit mobile number"></div></div><button class="primary" type="button" onclick="sendOtp(\''+role+'\')">Send OTP</button><button class="ghost" type="button" onclick="chooseRole(\''+role+'\')">Back</button><div class="small muted">OTP is used only to verify the account. After verification you will set your password.</div></div>';
+function startAccountSignup(role){
+ $('authForm').innerHTML='<div class="stack"><div class="field"><label>Full name</label><input id="signupName" class="login-password" type="text" autocomplete="name" placeholder="Enter your full name"></div><div class="field"><label>Mobile number</label><div class="login-phone"><div class="country">+91</div><input id="signupPhone" inputmode="tel" autocomplete="tel" placeholder="10-digit mobile number"></div><div class="small muted">Mobile number is saved with your account. SMS OTP verification will be added later.</div></div><div class="field"><label>Gmail / Email address</label><input id="signupEmail" class="login-password" type="email" autocomplete="email" placeholder="you@gmail.com"></div><button class="primary" type="button" onclick="sendSignupEmailOtp(\''+role+'\')">Send Gmail OTP</button><button class="ghost" type="button" onclick="chooseRole(\''+role+'\')">Back</button></div>';
 }
-async function startEmailSignup(role){
- $('authForm').innerHTML='<div class="stack"><div class="field"><label>Gmail / Email address</label><input id="authEmail" class="login-password" type="email" autocomplete="email" placeholder="you@example.com"></div><button class="primary" type="button" onclick="sendEmailOtp(\''+role+'\')">Send email OTP</button><button class="ghost" type="button" onclick="chooseRole(\''+role+'\')">Back</button></div>';
-}
-async function sendEmailOtp(role){
+async function sendSignupEmailOtp(role){
  if(!supabaseReady||!supabase){toast('Login service is still loading.');return}
- const email=($('authEmail')?.value||'').trim().toLowerCase();
- if(!/^\S+@\S+\.\S+$/.test(email)){toast('Enter a valid email address');return}
- $('authForm').innerHTML='<div class="success">Sending verification code to '+esc(email)+'…</div>';
- const {error}=await supabase.auth.signInWithOtp({email,options:{data:{requested_role:role}}});
- if(error){$('authForm').innerHTML='<div class="notice">'+esc(error.message)+'</div><button class="secondary" type="button" onclick="startEmailSignup(\''+role+'\')">Try again</button>';return}
- $('authForm').innerHTML='<div class="stack"><div class="success">Verification code sent to '+esc(email)+'</div><div class="field"><label>Verification code</label><input id="authEmailOtp" maxlength="6" inputmode="numeric" autocomplete="one-time-code" class="login-password" placeholder="6-digit code"></div><button class="primary" type="button" onclick="verifyEmailSignup(\''+role+'\',\''+encodeURIComponent(email)+'\')">Verify & continue</button></div>';
+ const name=($('signupName')?.value||'').trim();
+ const phone=normalizePhone($('signupPhone')?.value||'');
+ const email=($('signupEmail')?.value||'').trim().toLowerCase();
+ if(name.length<2){toast('Enter your full name');return}
+ if(!/^\\+91\\d{10}$/.test(phone)){toast('Enter a valid 10-digit Indian mobile number');return}
+ if(!/^\\S+@\\S+\\.\\S+$/.test(email)){toast('Enter a valid Gmail/email address');return}
+ $('authForm').innerHTML='<div class="success">Sending Gmail OTP to '+esc(email)+'…</div>';
+ const {error}=await supabase.auth.signInWithOtp({email,options:{data:{requested_role:role,full_name:name,mobile_number:phone}}});
+ if(error){$('authForm').innerHTML='<div class="notice">'+esc(error.message)+'</div><button class="secondary" type="button" onclick="startAccountSignup(\''+role+'\')">Try again</button>';return}
+ $('authForm').innerHTML='<div class="stack"><div class="success">OTP sent to '+esc(email)+'</div><div class="field"><label>Gmail OTP</label><input id="signupEmailOtp" maxlength="6" inputmode="numeric" autocomplete="one-time-code" class="login-password" placeholder="Enter 6-digit OTP"></div><button class="primary" type="button" onclick="verifySignupEmailOtp(\''+role+'\',\''+encodeURIComponent(name)+'\',\''+encodeURIComponent(phone)+'\',\''+encodeURIComponent(email)+'\')">Verify Gmail & Continue</button><button class="ghost" type="button" onclick="startAccountSignup(\''+role+'\')">Change details</button></div>';
 }
-async function verifyEmailSignup(role,ee){
- const email=decodeURIComponent(ee),token=($('authEmailOtp')?.value||'').replace(/\D/g,'');
+async function verifySignupEmailOtp(role,en,ep,ee){
+ const name=decodeURIComponent(en),phone=decodeURIComponent(ep),email=decodeURIComponent(ee);
+ const token=($('signupEmailOtp')?.value||'').replace(/\\D/g,'');
  if(token.length<4){toast('Enter the verification code');return}
  const {data,error}=await supabase.auth.verifyOtp({email,token,type:'email'});
  if(error){toast(error.message);return}
- await establishSupabaseUser(role,data.user);
- showSetPassword(role,'EMAIL',email);
+ await establishSupabaseUser(role,data.user,{name,phone,email});
+ showSetPassword(role,'EMAIL',email,{name,phone});
 }
-function showSetPassword(role,mode,identifier){
- $('authForm').innerHTML='<div class="stack"><div class="success">Account verified successfully.</div><div class="field"><label>Create password</label><input id="newPassword" class="login-password" type="password" autocomplete="new-password" placeholder="At least 8 characters"></div><div class="field"><label>Confirm password</label><input id="confirmPassword" class="login-password" type="password" autocomplete="new-password" placeholder="Repeat password"></div><button class="primary" type="button" onclick="setAccountPassword(\''+role+'\',\''+mode+'\',\''+encodeURIComponent(identifier)+'\')">Set Password & Finish</button><div class="small muted">Your password is handled by Supabase Auth and is not stored in this app's local storage.</div></div>';
+async function startEmailSignup(role){
+ startAccountSignup(role);
 }
-async function setAccountPassword(role,mode,ei){
+async function sendEmailOtp(role){
+ startAccountSignup(role);
+}
+async function verifyEmailSignup(role,ee){
+ const email=decodeURIComponent(ee);
+ const token=($('authEmailOtp')?.value||'').replace(/\\D/g,'');
+ if(token.length<4){toast('Enter the verification code');return}
+ const {data,error}=await supabase.auth.verifyOtp({email,token,type:'email'});
+ if(error){toast(error.message);return}
+ const name=data.user.user_metadata?.full_name||'New Customer';
+ const phone=data.user.user_metadata?.mobile_number||'';
+ await establishSupabaseUser(role,data.user,{name,phone,email});
+ showSetPassword(role,'EMAIL',email,{name,phone});
+}
+function showSetPassword(role,mode,identifier,profile={}){
+ $('authForm').innerHTML='<div class="stack"><div class="success">Gmail verified successfully ✓</div><div class="notice"><b>Final step</b><br>Create your password.</div><div class="field"><label>Create password</label><input id="newPassword" class="login-password" type="password" autocomplete="new-password" placeholder="At least 8 characters"></div><div class="field"><label>Confirm password</label><input id="confirmPassword" class="login-password" type="password" autocomplete="new-password" placeholder="Repeat password"></div><button class="primary" type="button" onclick="setAccountPassword(\''+role+'\',\''+mode+'\',\''+encodeURIComponent(identifier)+'\',\''+encodeURIComponent(profile.name||'')+'\',\''+encodeURIComponent(profile.phone||'')+'\')">Complete Account</button><div class="small muted">Your password is handled securely by Supabase Auth.</div></div>';
+}
+async function setAccountPassword(role,mode,ei,en='',ep=''){
  if(!supabaseReady||!supabase){toast('Login service is unavailable.');return}
  const p=$('newPassword')?.value||'',q=$('confirmPassword')?.value||'';
  if(p.length<8){toast('Password must be at least 8 characters');return}
  if(p!==q){toast('Passwords do not match');return}
- const {error}=await supabase.auth.updateUser({password:p});
+ const name=decodeURIComponent(en),phone=decodeURIComponent(ep);
+ const {error}=await supabase.auth.updateUser({password:p,data:{full_name:name,mobile_number:phone,requested_role:role}});
  if(error){toast(error.message);return}
- closeModal('authModal');save();toast('Account created. Password login is ready.');
+ await supabase.auth.signOut();
+ state.session=null;
+ save();
+ $('authForm').innerHTML='<div class="stack"><div class="success">Account created successfully ✓</div><div class="notice">Your Gmail is verified and your password is set. Now login to continue.</div><button class="primary" type="button" onclick="openPasswordLogin(\''+role+'\',\'EMAIL\')">🔐 Login with Gmail + Password</button></div>';
 }
 function normalizePhone(raw){
  const digits=(raw||'').replace(/\D/g,'');
@@ -376,7 +399,7 @@ async function verifyAuth(role,ep){
  await establishSupabaseUser(role,data.user);
  showSetPassword(role,'PHONE',p);
 }
-function establishSupabaseUser(role,user){if(!user)return;const phone=user.phone||'';if(role==='CUSTOMER'){let u=state.customers.find(x=>x.id===user.id)||state.customers.find(x=>x.phone===phone);if(!u){u={id:user.id,name:user.user_metadata?.name||'New Customer',phone,photo:''};state.customers.push(u)}else{u.id=user.id;u.phone=phone}state.session={role:'CUSTOMER',id:u.id}}else{let d=state.drivers.find(x=>x.id===user.id)||state.drivers.find(x=>x.phone===phone);if(!d){d={id:user.id,name:user.user_metadata?.name||'New Driver',phone,vehicle:'BIKE',registration:'',verified:false,verification:'PENDING',online:false,earn:0,photo:'',documents:[],checks:[]};state.drivers.push(d)}else{d.id=user.id;d.phone=phone}state.session={role:'DRIVER',id:d.id}}}
+function establishSupabaseUser(role,user,profile={}){if(!user)return;const phone=profile.phone||user.user_metadata?.mobile_number||user.phone||'';const name=profile.name||user.user_metadata?.full_name||user.user_metadata?.name||(role==='CUSTOMER'?'New Customer':'New Driver');if(role==='CUSTOMER'){let u=state.customers.find(x=>x.id===user.id)||state.customers.find(x=>x.phone===phone);if(!u){u={id:user.id,name,phone,photo:''};state.customers.push(u)}else{u.id=user.id;u.name=name||u.name;u.phone=phone||u.phone}state.session={role:'CUSTOMER',id:u.id}}else{let d=state.drivers.find(x=>x.id===user.id)||state.drivers.find(x=>x.phone===phone);if(!d){d={id:user.id,name,phone,vehicle:'BIKE',registration:'',verified:false,verification:'PENDING',online:false,earn:0,photo:'',documents:[],checks:[]};state.drivers.push(d)}else{d.id=user.id;d.name=name||d.name;d.phone=phone||d.phone}state.session={role:'DRIVER',id:d.id}}}
 function editProfile(){const u=currentUser();$('profileName').value=u.name;$('profilePhone').value=u.phone;openModal('profileModal')}
 function saveProfile(){const u=currentUser();if(!u)return;u.name=$('profileName').value.trim()||u.name;const f=$('profilePhoto').files[0];if(f){const rd=new FileReader();rd.onload=()=>{u.photo=rd.result;closeModal('profileModal');save()};rd.readAsDataURL(f)}else{closeModal('profileModal');save()}toast('Profile updated')}
 function submitDriverRegistration(){const d=currentUser();if(!d||state.session.role!=='DRIVER'){toast('Login as Driver first');return}d.name=$('regName').value.trim()||d.name;d.phone=$('regPhone').value.trim()||d.phone;d.vehicle=$('regVehicle').value;d.registration=$('regRc').value.trim();d.verification='UNDER_REVIEW';d.online=false;d.documents=[];['regDl','regId','regRcDoc','regInsurance','regPuc','regPermit','regVehiclePhoto'].forEach(id=>{const f=$(id).files[0];if(f)d.documents.push($(id).previousElementSibling.textContent||id)});d.checks=runPrecheck();closeModal('driverModal');save();toast('Documents submitted for admin verification')}
