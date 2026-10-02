@@ -4,12 +4,24 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#087a52">
+<meta name="description" content="Assam Drive — ride booking for customers and verified driver partners across Assam.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Assam Drive">
+<meta property="og:description" content="Your Ride • Our Assam — Bike, Auto and Car ride booking.">
+<meta property="og:image" content="./assets/assam-ride-logo.svg">
+<meta property="og:image:alt" content="Assam Drive logo">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Assam Drive">
+<meta name="twitter:description" content="Your Ride • Our Assam">
+<meta name="twitter:image" content="./assets/assam-ride-logo.svg">
+<link rel="icon" type="image/svg+xml" href="./assets/assam-ride-logo.svg">
+<link rel="apple-touch-icon" href="./assets/assam-ride-logo.svg">
 <link rel="manifest" href="./manifest.webmanifest">
 <title>Assam Drive</title>
 <style>
 :root{--g:#087a52;--g2:#10a66c;--bg:#f3f7f5;--card:#fff;--text:#17211d;--muted:#66736d;--line:#dce6e1;--danger:#c62828;--warn:#9a6700;--blue:#1769aa}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px system-ui,-apple-system,Segoe UI,Roboto,sans-serif}button,input,select{font:inherit}button{border:0;cursor:pointer}.app{min-height:100vh;max-width:1120px;margin:auto}
-header{position:sticky;top:0;z-index:20;background:#fffffff2;backdrop-filter:blur(12px);border-bottom:1px solid var(--line);padding:11px 15px;display:flex;gap:12px;align-items:center;justify-content:space-between}.brand{display:flex;align-items:center;gap:10px;font-weight:800}.logo{width:40px;height:40px;border-radius:13px;background:linear-gradient(135deg,var(--g),var(--g2));display:grid;place-items:center;color:#fff;font-size:21px}
+header{position:sticky;top:0;z-index:20;background:#fffffff2;backdrop-filter:blur(12px);border-bottom:1px solid var(--line);padding:11px 15px;display:flex;gap:12px;align-items:center;justify-content:space-between}.brand{display:flex;align-items:center;gap:10px;font-weight:800}.logo{width:42px;height:42px;border-radius:13px;object-fit:cover;background:#fff;border:1px solid #dce6e1;box-shadow:0 3px 10px #0002}
 nav{display:flex;gap:6px;flex-wrap:wrap}.navbtn,.primary,.secondary,.danger,.ghost{padding:10px 13px;border-radius:11px;font-weight:750}.navbtn{background:#edf3f0;color:#30413a}.navbtn.active,.primary{background:var(--g);color:#fff}.secondary{background:#e7f5ef;color:var(--g)}.danger{background:#fdeaea;color:var(--danger)}.ghost{background:transparent;color:var(--g);border:1px solid var(--line)}
 main{padding:16px}.view{display:none}.view.active{display:block}.admin-private{display:none!important}.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:0 8px 28px #12331d10}.span3{grid-column:span 3}.span4{grid-column:span 4}.span6{grid-column:span 6}.span8{grid-column:span 8}.span12{grid-column:span 12}
 h1,h2,h3{margin:0 0 8px}h1{font-size:27px}h2{font-size:20px}h3{font-size:16px}.muted{color:var(--muted)}.small{font-size:12px}.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.between{justify-content:space-between}.stack{display:grid;gap:10px}.field label{display:block;font-weight:700;margin-bottom:5px}.field input,.field select{width:100%;padding:12px;border:1px solid var(--line);border-radius:11px;background:#fff;outline:none}.field input:focus,.field select:focus{border-color:var(--g)}
@@ -35,12 +47,37 @@ h1,h2,h3{margin:0 0 8px}h1{font-size:27px}h2{font-size:20px}h3{font-size:16px}.m
 @media(max-width:760px){.menuBtn{display:block}header nav{display:none}}
 
 .google-map-pin{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:#087a52;color:#fff;border:3px solid #fff;box-shadow:0 3px 12px #0004}.map-error{padding:14px;text-align:center;background:#fff5db;color:#795b00;height:100%;display:grid;place-items:center}
+/* Branded login screen */
+body.login-screen{background:#070707;color:#fff}
+body.login-screen header{display:none}
+body.login-screen main{padding:0}
+body.login-screen .login-gate{min-height:100dvh;background:#070707;color:#fff;display:flex;align-items:center;justify-content:center;padding:28px 22px}
+.login-panel{width:min(430px,100%);display:flex;flex-direction:column;align-items:center;text-align:center}
+.login-logo{width:104px;height:104px;object-fit:cover;border-radius:28px;background:#fff;box-shadow:0 16px 40px #0008;margin-bottom:28px}
+.login-brand{font-size:29px;font-weight:850;letter-spacing:-.8px;margin-bottom:42px}
+.login-title{font-size:25px;font-weight:750;margin-bottom:22px}
+.login-phone{width:100%;display:grid;grid-template-columns:86px 1fr;border:1px solid #39353f;border-radius:18px;background:#17151b;overflow:hidden;margin-bottom:18px}
+.login-phone .country{display:flex;align-items:center;justify-content:center;border-right:1px solid #39353f;font-weight:700;color:#fff}
+.login-phone input{width:100%;border:0;outline:0;background:transparent;color:#fff;padding:19px 18px;font-size:17px}
+.login-phone input::placeholder{color:#77737d}
+.login-otp{width:100%;padding:18px;border-radius:18px;background:#2b2a2d;color:#777;border:0;font-weight:800;font-size:16px}
+.login-otp.ready{background:#087a52;color:#fff}
+.login-or{width:100%;display:flex;align-items:center;gap:12px;color:#77737d;margin:42px 0 20px;font-weight:650}
+.login-or:before,.login-or:after{content:"";height:1px;background:#343238;flex:1}
+.login-alt{display:grid;grid-template-columns:1fr 1fr;gap:16px;width:100%}
+.login-alt button{height:68px;border:1px solid #55515f;border-radius:20px;background:#17151b;color:#fff;font-size:22px}
+.login-alt button span{display:block;font-size:13px;margin-top:4px;color:#aaa6b0}
+.login-terms{margin-top:26px;color:#77737d;font-size:12px;line-height:1.6}
+.login-terms u{color:#aaa6b0}
+.login-driver{margin-top:20px;background:transparent;color:#d8d4dc;border:0;font-weight:750}
+.login-status{min-height:22px;margin-top:12px;font-size:13px;color:#a8d9c3}
+@media(max-width:760px){.login-logo{width:96px;height:96px}.login-brand{margin-bottom:36px}.login-title{font-size:23px}.login-panel{max-width:390px}}
 </style>
 </head>
 <body>
 <div class="app">
 <header>
-<div class="brand"><div class="logo">🚗</div><div>Assam Drive<div class="small muted">Ride booking • Assam</div></div></div>
+<div class="brand"><img class="logo" src="./assets/assam-ride-logo.svg" alt="Assam Drive logo"><div>Assam Drive<div class="small muted">Ride booking • Assam</div></div></div>
 <button type="button" class="menuBtn" id="menuBtn" aria-label="Open menu" onclick="document.getElementById('sidemenu').classList.add('show');document.getElementById('sideback').classList.add('show')">☰</button><nav>
 <button class="navbtn active" data-view="customer">Customer</button>
 <button class="navbtn" data-view="driver">Driver</button>
@@ -62,7 +99,23 @@ h1,h2,h3{margin:0 0 8px}h1{font-size:27px}h2{font-size:20px}h3{font-size:16px}.m
   <div class="sidefoot"><b>Customer Support</b><div class="small muted" style="margin-top:4px">assamridesupport@gmail.com</div><button class="secondary" id="emailSupport" style="margin-top:10px;width:100%">✉️ Email support</button></div>
 </aside>
 <main>
-<section id="loginGate" class="view active"><div class="hero"><h1>Welcome to Assam Drive</h1><p>Please login or register first. Your Customer or Driver home will appear after mobile OTP verification.</p><div class="row" style="margin-top:16px"><button class="primary" onclick="openModal('authModal');chooseRole('CUSTOMER')">👤 Customer Login / Register</button><button class="secondary" onclick="openModal('authModal');chooseRole('DRIVER')">🚗 Driver Login / Register</button></div></div></section>
+<section id="loginGate" class="view active login-gate">
+<div class="login-panel">
+<img class="login-logo" src="./assets/assam-ride-logo.svg" alt="Assam Drive">
+<div class="login-brand">Assam Drive</div>
+<div class="login-title">Get Started</div>
+<div class="login-phone"><div class="country">+91⌄</div><input id="loginGatePhone" inputmode="tel" autocomplete="tel" placeholder="Enter mobile number"></div>
+<button class="login-otp" id="loginGateOtp" type="button">GET OTP</button>
+<div class="login-status" id="loginGateStatus"></div>
+<div class="login-or">OR CONTINUE WITH</div>
+<div class="login-alt">
+<button type="button" onclick="gateGoogleLogin()">G <span>Google</span></button>
+<button type="button" onclick="gateEmailLogin()">✉ <span>Email</span></button>
+</div>
+<div class="login-terms">By continuing, you agree to Assam Drive's<br><u>Terms of Service</u> and <u>Privacy Policy</u></div>
+<button class="login-driver" type="button" onclick="openModal('authModal');chooseRole('DRIVER')">🚗 Driver Partner Login / Register</button>
+</div>
+</section>
 <section id="customer" class="view">
 <div class="hero"><h1>Book a ride in Assam</h1><p>Register with mobile OTP, choose Bike / Auto / Car and pay according to the actual trip distance.</p></div>
 <div class="grid" style="margin-top:14px">
@@ -198,6 +251,7 @@ function renderFare(){$('fare').textContent='₹'+Math.round(estimate());$('rout
 function render(){
  renderFare();
  const logged=!!state.session;
+ document.body.classList.toggle('login-screen',!logged);
  $('loginGate').classList.toggle('active',!logged);
  $('customer').classList.toggle('active',logged&&state.session.role==='CUSTOMER');
  $('driver').classList.toggle('active',logged&&state.session.role==='DRIVER');
@@ -218,6 +272,24 @@ function render(){
  $('adminRides').innerHTML=state.rides.slice().reverse().map(r=>'<div class="ride"><div class="ride-title"><b>#'+r.id+' '+r.vehicle+'</b><span class="pill">'+r.status+'</span></div><div class="small">'+esc(r.pickup)+' → '+esc(r.destination)+' • ₹'+r.fare+(r.driverName?' • Driver: '+esc(r.driverName):'')+'</div></div>').join('')||'<div class="muted">No rides.</div>';
 }
 function esc(x){return String(x??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function gateSetStatus(msg,ok=false){const el=$('loginGateStatus');if(el){el.textContent=msg;el.style.color=ok?'#9be2c0':'#ffb5b5'}}
+async function gateSendOtp(){
+ const raw=($('loginGatePhone')?.value||'').trim(),p=raw.replace(/[\s()-]/g,'');
+ if(!/^\+91\d{10}$/.test(p)){gateSetStatus('Enter mobile number like +919876543210');return}
+ if(!supabaseReady||!supabase){gateSetStatus('Login service is still loading. Please try again.');return}
+ gateSetStatus('Sending OTP…',true);
+ const {error}=await supabase.auth.signInWithOtp({phone:p,options:{data:{requested_role:'CUSTOMER'}}});
+ if(error){gateSetStatus(error.message);return}
+ const btn=$('loginGateOtp');btn.textContent='OTP SENT — OPEN LOGIN';btn.classList.add('ready');btn.onclick=()=>{openModal('authModal');chooseRole('CUSTOMER');$('authPhone').value=p};gateSetStatus('OTP sent. Enter it in the verification screen.',true);
+}
+function gateGoogleLogin(){
+ if(!supabaseReady||!supabase){gateSetStatus('Login service is still loading. Please try again.');return}
+ localStorage.setItem('assam_drive_pending_role','CUSTOMER');
+ supabase.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.href}});
+}
+function gateEmailLogin(){openModal('authModal');$('authForm').innerHTML='<div class="stack"><div class="field"><label>Email address</label><input id="authEmail" type="email" autocomplete="email" placeholder="you@example.com"></div><button class="primary" onclick="sendEmailOtp(\'CUSTOMER\')">Send email code</button><div class="small muted">Email sign-in must be enabled in Supabase Auth.</div></div>'}
+async function sendEmailOtp(role){if(!supabaseReady||!supabase){toast('Login service is unavailable right now.');return}const email=($('authEmail')?.value||'').trim();if(!/^\S+@\S+\.\S+$/.test(email)){toast('Enter a valid email address');return}const {error}=await supabase.auth.signInWithOtp({email,options:{data:{requested_role:role}}});if(error){toast(error.message);return}$('authForm').innerHTML='<div class="stack"><div class="success">Verification email/code sent to '+esc(email)+'</div><div class="field"><label>Verification code</label><input id="authEmailOtp" inputmode="numeric" autocomplete="one-time-code"></div><button class="primary" onclick="verifyEmailOtp(\''+role+'\',\''+encodeURIComponent(email)+'\')">Verify</button></div>'}
+async function verifyEmailOtp(role,ee){const email=decodeURIComponent(ee),token=($('authEmailOtp')?.value||'').replace(/\D/g,'');if(!supabaseReady||!supabase||token.length<4){toast('Enter the verification code');return}const {data,error}=await supabase.auth.verifyOtp({email,token,type:'email'});if(error){toast(error.message);return}await establishSupabaseUser(role,data.user);closeModal('authModal');save();toast('Login successful')}
 function chooseRole(role){$('authForm').innerHTML='<div class="stack"><div class="field"><label>Mobile number</label><input id="authPhone" inputmode="tel" autocomplete="tel" placeholder="+91 9XXXXXXXXX"></div><button class="primary" onclick="sendOtp(\''+role+'\')">Send OTP</button><div class="small muted">A 6-digit OTP will be sent by Supabase Auth SMS. The SMS provider must be enabled in the Supabase project.</div></div>'}
 async function sendOtp(role){if(!supabaseReady||!supabase){toast('Login service is still loading. Please try again.');return}const raw=($('authPhone').value||'').trim();const p=raw.replace(/[\s()-]/g,'');if(!/^\+91\d{10}$/.test(p)){toast('Enter Indian mobile number like +919876543210');return}$('authForm').innerHTML='<div class="stack"><div class="success">Sending OTP to '+esc(p)+'…</div></div>';const {error}=await supabase.auth.signInWithOtp({phone:p,options:{data:{requested_role:role}}});if(error){$('authForm').innerHTML='<div class="notice">'+esc(error.message)+'</div><button class="secondary" onclick="chooseRole(\''+role+'\')">Try again</button>';toast('OTP could not be sent');return}$('authForm').innerHTML='<div class="stack"><div class="success">OTP sent to '+esc(p)+'</div><div class="field"><label>6-digit OTP</label><input id="authOtp" maxlength="6" inputmode="numeric" autocomplete="one-time-code"></div><button class="primary" onclick="verifyAuth(\''+role+'\',\''+encodeURIComponent(p)+'\')">Verify OTP</button><button class="ghost" onclick="chooseRole(\''+role+'\')">Change number</button><div class="small muted">OTP verification is handled by Supabase Auth.</div></div>'}
 async function verifyAuth(role,ep){if(!supabaseReady||!supabase){toast('Login service is unavailable right now.');return}const p=decodeURIComponent(ep),otp=($('authOtp').value||'').replace(/\D/g,'');if(otp.length!==6){toast('Enter the 6-digit OTP');return}const {data,error}=await supabase.auth.verifyOtp({phone:p,token:otp,type:'sms'});if(error){toast(error.message);return}await establishSupabaseUser(role,data.user);closeModal('authModal');save();toast(role==='CUSTOMER'?'Customer login successful':'Driver login successful')}
@@ -237,6 +309,8 @@ function rejectRide(){const r=state.rides.find(x=>x.status==='SEARCHING');if(!r)
 function verifyOtp(){const r=state.rides.find(x=>x.driverId===state.session.id&&x.status==='OTP_PENDING');if(!r)return;const val=($('otpInput').value||'').replace(/\D/g,'');if(val===r.otp){r.status='RIDE_STARTED';r.otp=null;save();toast('OTP verified — ride started')}else{r.otpAttempts++;if(r.otpAttempts>=2){r.status='CANCELLED';r.otp=null;save();toast('Ride cancelled after 2 wrong OTP attempts')}else{save();toast('Wrong OTP — 1 attempt remaining')}}}
 function completeRide(){const r=activeRide();if(!r||r.status!=='RIDE_STARTED')return;r.status='COMPLETED';const d=state.drivers.find(x=>x.id===r.driverId);if(d)d.earn+=r.fare;save();toast('Ride completed')}
 function sos(){toast('SOS event logged. Connect emergency call/contacts before production launch.')}
+$('loginGateOtp').onclick=gateSendOtp;
+$('loginGatePhone').addEventListener('input',()=>{const p=$('loginGatePhone').value.replace(/[\s()-]/g,'');$('loginGateOtp').classList.toggle('ready',/^\+91\d{10}$/.test(p));});
 $('authBtn').onclick=()=>{openModal('authModal');chooseRole(state.session?.role||'CUSTOMER')};
 $('menuBtn')?.addEventListener('click',openSide);
 $('sideClose')?.addEventListener('click',closeSide);
