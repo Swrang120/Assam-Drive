@@ -65,7 +65,7 @@ body.login-screen .login-gate{min-height:100dvh;background:
 .login-tagline{font-size:10px;letter-spacing:2.8px;color:#8ca99d;font-weight:800;margin-top:6px}
 .login-title{font-size:25px;font-weight:800;margin-top:38px;margin-bottom:7px}
 .login-subtitle{color:#8e9c96;font-size:14px;margin-bottom:22px}
-.premium-actions{width:100%;display:grid;gap:13px;position:relative;z-index:100;pointer-events:auto}.premium-actions button{position:relative;z-index:101;pointer-events:auto!important;touch-action:manipulation;-webkit-tap-highlight-color:transparent;cursor:pointer}
+.premium-actions{width:100%;display:grid;gap:13px;position:relative;z-index:100;pointer-events:auto!important;touch-action:manipulation;isolation:isolate}.premium-actions button{position:relative;z-index:101;display:block;pointer-events:auto!important;touch-action:manipulation;-webkit-tap-highlight-color:transparent;cursor:pointer;user-select:none;-webkit-user-select:none}.login-gate,.login-panel,.login-actions{pointer-events:auto!important}
 .login-main-btn{width:100%;min-height:62px;border-radius:17px;font-size:17px;font-weight:900;touch-action:manipulation;transition:transform .15s,box-shadow .15s,border-color .15s}.login-main-btn:active,.login-link-btn:active{transform:scale(.985)}
 .login-link-btn{min-height:50px;background:linear-gradient(135deg,#17241f,#102019);color:#d5eee3;padding:12px 16px;border:1px solid #315247;border-radius:15px;font-size:14px;font-weight:850;text-decoration:none;box-shadow:0 7px 20px #0004;touch-action:manipulation}
 .login-main-btn.primary{background:linear-gradient(135deg,#087a52,#10a66c);color:#fff;border:1px solid #27c98a;box-shadow:0 12px 30px #087a5238}
@@ -934,9 +934,22 @@ function bindLoginGateButtons(){
   const bind=(el,fn)=>{
     if(!el||el.dataset.authBound==='1')return;
     el.dataset.authBound='1';
-    const run=e=>{e.preventDefault();e.stopPropagation();try{fn()}catch(err){console.error('Auth action:',err);}};
-    el.addEventListener('pointerup',run,{passive:false});
-    el.addEventListener('click',run,{passive:false});
+    let lastRun=0;
+    const run=e=>{
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation?.();
+      const now=Date.now();
+      if(now-lastRun<450)return;
+      lastRun=now;
+      try{fn()}catch(err){
+        console.error('Auth action:',err);
+        const s=document.getElementById('loginGateStatus');
+        if(s)s.textContent='Please try again. '+(err?.message||'Authentication error');
+      }
+    };
+    el.addEventListener('pointerup',run,{passive:false,capture:true});
+    el.addEventListener('click',run,{passive:false,capture:true});
   };
   bind(login,()=>window.assamDriveAuth('LOGIN'));
   bind(signup,()=>window.assamDriveAuth('SIGNUP'));
