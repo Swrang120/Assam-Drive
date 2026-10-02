@@ -81,15 +81,15 @@ body.login-screen .login-gate{min-height:100dvh;background:#070707;color:#fff;di
 <div class="app">
 <header>
 <div class="brand"><img class="logo" src="./assets/assam-drive-logo.jpg" alt="Assam Drive logo"><div>Assam Drive<div class="small muted">Ride booking • Assam</div></div></div>
-<button type="button" class="menuBtn" id="menuBtn" aria-label="Open menu" onclick="document.getElementById('sidemenu').classList.add('show');document.getElementById('sideback').classList.add('show')">☰</button><nav>
+<button hidden type="button" class="menuBtn" id="menuBtn" aria-label="Open menu" onclick="document.getElementById('sidemenu').classList.add('show');document.getElementById('sideback').classList.add('show')">☰</button><nav>
 <button class="navbtn active" data-view="customer">Customer</button>
 <button class="navbtn" data-view="driver">Driver</button>
 <button class="navbtn" id="authBtn">Login / Register</button>
 <button class="navbtn" id="logoutBtn" style="display:none">Logout</button>
 </nav>
 </header>
-<div class="sideback" id="sideback" onclick="document.getElementById('sidemenu').classList.remove('show');this.classList.remove('show')"></div>
-<aside class="sidemenu" id="sidemenu" aria-label="Assam Drive menu">
+<div hidden class="sideback" id="sideback" onclick="document.getElementById('sidemenu').classList.remove('show');this.classList.remove('show')"></div>
+<aside hidden class="sidemenu" id="sidemenu" aria-label="Assam Drive menu">
   <div class="sidehead"><div class="sidebrand"><div class="sideicon">🚗</div><div>Assam Drive<div class="small muted">Premium ride support</div></div></div><button type="button" class="ghost" id="sideClose" onclick="document.getElementById('sidemenu').classList.remove('show');document.getElementById('sideback').classList.remove('show')">✕</button></div>
   <button type="button" class="sideitem" data-side="customer" onclick="document.querySelectorAll('.view').forEach(x=>x.classList.toggle('active',x.id==='customer'));document.querySelectorAll('.navbtn[data-view]').forEach(x=>x.classList.toggle('active',x.dataset.view==='customer'));document.getElementById('sidemenu').classList.remove('show');document.getElementById('sideback').classList.remove('show')"><span>🏠</span><span>Customer Home</span></button>
   <button type="button" class="sideitem" data-side="driver" onclick="document.querySelectorAll('.view').forEach(x=>x.classList.toggle('active',x.id==='driver'));document.querySelectorAll('.navbtn[data-view]').forEach(x=>x.classList.toggle('active',x.dataset.view==='driver'));document.getElementById('sidemenu').classList.remove('show');document.getElementById('sideback').classList.remove('show')"><span>🚗</span><span>Driver Partner</span></button>
@@ -237,6 +237,9 @@ if(!state.drivers.length)state.drivers.push(JSON.parse(JSON.stringify(defaults.d
 state.drivers.forEach(d=>{d.documents=Array.isArray(d.documents)?d.documents:[];d.checks=Array.isArray(d.checks)?d.checks:[];d.earn=Number.isFinite(+d.earn)?+d.earn:0;d.verification=d.verification||'PENDING';d.online=!!d.online;d.vehicle=d.vehicle||'BIKE';d.registration=d.registration||'';d.phone=d.phone||'';d.name=d.name||'Driver'});
 const $=id=>document.getElementById(id);
 document.body.classList.add('login-screen');
+$('menuBtn')?.setAttribute('hidden','');
+$('sidemenu')?.setAttribute('hidden','');
+$('sideback')?.setAttribute('hidden','');
 $('menuBtn')?.style.setProperty('display','none','important');
 $('sidemenu')?.style.setProperty('display','none','important');
 $('sideback')?.style.setProperty('display','none','important');
@@ -260,8 +263,8 @@ function toast(x){const t=$('toast');t.textContent=x;t.style.display='block';cle
 function openModal(id){const el=$(id);if(!el)return;closeSide();el.classList.add('show');el.style.display='flex';el.style.pointerEvents='auto';el.setAttribute('aria-hidden','false');}
 function closeModal(id){const el=$(id);if(!el)return;el.classList.remove('show');el.style.display='none';el.style.pointerEvents='none';el.setAttribute('aria-hidden','true');}
 
-function openSide(){ $('sidemenu')?.classList.add('show'); $('sideback')?.classList.add('show') }
-function closeSide(){ $('sidemenu')?.classList.remove('show'); $('sideback')?.classList.remove('show') }
+function openSide(){ if(!state.session)return; $('sidemenu')?.removeAttribute('hidden'); $('sideback')?.removeAttribute('hidden'); $('sidemenu')?.classList.add('show'); $('sideback')?.classList.add('show') }
+function closeSide(){ $('sidemenu')?.classList.remove('show'); $('sideback')?.classList.remove('show'); $('sidemenu')?.setAttribute('hidden',''); $('sideback')?.setAttribute('hidden','') }
 function showInfo(title,body){$('authForm').innerHTML='<div class="stack"><h3>'+esc(title)+'</h3><div class="notice">'+body+'</div><button class="secondary" onclick="closeModal(\'authModal\')">Close</button></div>';openModal('authModal')}
 function currentUser(){if(!state.session)return null;return state.session.role==='CUSTOMER'?state.customers.find(x=>x.id===state.session.id):state.drivers.find(x=>x.id===state.session.id)}
 function vehicle(){const el=document.querySelector('input[name=vehicle]:checked');return el?el.value:'BIKE'}
@@ -274,10 +277,16 @@ function render(){
  const sm=$('sidemenu'), sb=$('sideback');
  if(!logged){
    closeSide();
+   $('menuBtn')?.setAttribute('hidden','');
+   sm?.setAttribute('hidden','');
+   sb?.setAttribute('hidden','');
    $('menuBtn')?.style.setProperty('display','none','important');
    sm?.style.setProperty('display','none','important');
    sb?.style.setProperty('display','none','important');
  }else{
+   $('menuBtn')?.removeAttribute('hidden');
+   sm?.removeAttribute('hidden');
+   sb?.removeAttribute('hidden');
    $('menuBtn')?.style.removeProperty('display');
    sm?.style.removeProperty('display');
    sb?.style.removeProperty('display');
@@ -515,7 +524,7 @@ authModal?.addEventListener('click',e=>{if(e.target===authModal)closeModal('auth
 
 $('createAccountBtn')?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();window.__openCreateAccount(e)},{capture:true});
 $('createAccountBtn')?.addEventListener('touchend',e=>{e.preventDefault();e.stopPropagation();window.__openCreateAccount(e)},{capture:true,passive:false});
-$('menuBtn')?.addEventListener('click',openSide);
+$('menuBtn')?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();openSide();});
 $('sideClose')?.addEventListener('click',closeSide);
 $('sideback')?.addEventListener('click',closeSide);
 document.querySelectorAll('[data-side]').forEach(b=>b.addEventListener('click',()=>{const v=b.dataset.side;document.querySelectorAll('.navbtn[data-view]').forEach(x=>{x.classList.toggle('active',x.dataset.view===v)});document.querySelectorAll('.view').forEach(x=>x.classList.toggle('active',x.id===v));closeSide()}));
