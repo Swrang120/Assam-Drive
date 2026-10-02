@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#087a52"><title>Registration • Assam Drive</title><style>
+*{box-sizing:border-box}body{margin:0;background:#07120e;min-height:100vh;padding:20px;display:grid;place-items:center;font:15px system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#17211d}.box{width:min(460px,100%);background:#fff;border-radius:24px;padding:22px;box-shadow:0 20px 60px #0008}.logo{display:block;width:78px;height:78px;object-fit:contain;margin:auto;border-radius:20px}.brand{text-align:center;color:#087a52;font-size:26px;font-weight:900;margin-top:8px}.sub{text-align:center;color:#66736d;margin:5px 0 20px}.grid{display:grid;gap:10px}.input{width:100%;min-height:54px;padding:13px;border:1px solid #dce6e1;border-radius:13px;font:inherit}.btn{width:100%;min-height:54px;border:0;border-radius:13px;font:inherit;font-weight:800;cursor:pointer;pointer-events:auto;touch-action:manipulation;position:relative;z-index:2}.primary{background:#087a52;color:#fff}.ghost{background:#f4f7f5;color:#087a52;border:1px solid #dce6e1}.status{min-height:22px;color:#b3261e;font-size:13px;margin-top:6px}.hidden{display:none!important}.back{text-align:center;margin-top:15px}.back a{color:#087a52;text-decoration:none;font-weight:800}.role{font-weight:900;color:#087a52;text-align:center;margin-bottom:12px}
+</style></head>
+<body><main class="box">
+<img class="logo" src="../assets/assam-drive-logo.jpg" alt="Assam Drive">
+<div class="brand">Create Account</div>
+<div class="sub">Complete your registration</div>
+<div class="role" id="roleLabel"></div>
+<div class="grid">
+<input class="input" id="name" type="text" placeholder="Full name" autocomplete="name">
+<input class="input" id="phone" type="tel" inputmode="numeric" maxlength="10" placeholder="10-digit mobile number" autocomplete="tel">
+<input class="input" id="email" type="email" placeholder="Gmail / Email" autocomplete="email">
+<button type="button" class="btn primary" id="send">📩 Send Gmail OTP</button>
+<div id="otpBox" class="hidden">
+<input class="input" id="otp" type="text" inputmode="numeric" maxlength="6" placeholder="6-digit Gmail OTP" autocomplete="one-time-code">
+<button type="button" class="btn primary" id="verify" style="margin-top:10px">Verify Gmail</button>
+</div>
+<div id="passBox" class="hidden">
+<input class="input" id="pass" type="password" placeholder="Create password" autocomplete="new-password">
+<input class="input" id="confirm" type="password" placeholder="Confirm password" autocomplete="new-password">
+<button type="button" class="btn primary" id="complete">Complete Account</button>
+</div>
+<div class="status" id="status" aria-live="polite"></div>
+</div>
+<div class="back"><a href="./create-account.html">← Change account type</a> · <a href="../index.html">Home</a></div>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="./signup.js"></script>
+<script>const r=new URLSearchParams(location.search).get('role');document.getElementById('roleLabel').textContent=r==='DRIVER'?'🚗 Driver Account':'👤 Customer Account';</script>
+</body></html>
