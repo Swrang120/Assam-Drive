@@ -15,7 +15,7 @@ main{padding:16px}.view{display:none}.view.active{display:block}.grid{display:gr
 h1,h2,h3{margin:0 0 8px}h1{font-size:27px}h2{font-size:20px}h3{font-size:16px}.muted{color:var(--muted)}.small{font-size:12px}.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.between{justify-content:space-between}.stack{display:grid;gap:10px}.field label{display:block;font-weight:700;margin-bottom:5px}.field input,.field select{width:100%;padding:12px;border:1px solid var(--line);border-radius:11px;background:#fff;outline:none}.field input:focus,.field select:focus{border-color:var(--g)}
 .hero{background:linear-gradient(135deg,#087a52,#126f59);color:#fff;border-radius:22px;padding:22px}.hero p{color:#d9f4e9}.notice{padding:11px 13px;border-radius:12px;background:#fff8df;color:#795b00;border:1px solid #f0dda0}.success{padding:11px 13px;border-radius:12px;background:#e8f7ef;color:#087548;border:1px solid #c8ead8}
 .vehicle{display:flex;gap:10px}.vehicle label{flex:1}.vehicle input{display:none}.vehicle span{display:block;padding:12px;text-align:center;border:1px solid var(--line);border-radius:12px;font-weight:700}.vehicle input:checked+span{border-color:var(--g);background:#e9f7f1;color:var(--g)}
-.map{height:300px;border-radius:16px;overflow:hidden;background:#dfeee7;position:relative;border:1px solid var(--line)}.map svg{width:100%;height:100%}.marker{position:absolute;width:18px;height:18px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 8px #0004}.pickup{background:#1687ff}.dest{background:#e64b4b}.driver{background:#0b7a53}.m1{left:27%;top:62%}.m2{left:71%;top:28%}.m3{left:53%;top:47%}
+.map{height:340px;border-radius:16px;overflow:hidden;background:#dfeee7;position:relative;border:1px solid var(--line)}.map svg{width:100%;height:100%}.marker{position:absolute;width:18px;height:18px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 8px #0004}.pickup{background:#1687ff}.dest{background:#e64b4b}.driver{background:#0b7a53}.m1{left:27%;top:62%}.m2{left:71%;top:28%}.m3{left:53%;top:47%}
 .stat{padding:14px;border-radius:14px;background:#f6faf8;border:1px solid var(--line)}.stat b{display:block;font-size:22px}.pill{padding:5px 9px;border-radius:99px;font-size:12px;font-weight:800;background:#eef3f0}.ok{background:#e8f7ef;color:#087548}.warn{background:#fff5db;color:#9a6700}.bad{background:#fdeaea;color:#a61e1e}.blue{background:#e8f2fb;color:#1769aa}
 .ride{border:1px solid var(--line);border-radius:14px;padding:13px}.ride+.ride{margin-top:9px}.ride-title{display:flex;justify-content:space-between;gap:8px}.avatar{width:62px;height:62px;border-radius:50%;object-fit:cover;background:#e9f1ed;border:2px solid #fff;box-shadow:0 2px 8px #0002}.doc{border:1px dashed #b9c9c2;border-radius:12px;padding:12px;background:#fafcfb}.modal{position:fixed;inset:0;background:#10241db8;z-index:50;display:none;pointer-events:none;align-items:center;justify-content:center;padding:14px}.modal.show{display:flex;pointer-events:auto}.modalbox{width:min(620px,100%);max-height:92vh;overflow:auto;background:#fff;border-radius:22px;padding:18px}.role{display:grid;grid-template-columns:1fr 1fr;gap:12px}.role button{padding:18px;border:1px solid var(--line);border-radius:15px;background:#fff;font-weight:800}.role button:hover{border-color:var(--g)}.tabs{display:flex;gap:7px;overflow:auto;margin-bottom:12px}.tab{white-space:nowrap;padding:9px 12px;border-radius:10px;background:#edf3f0;font-weight:700}.tab.active{background:var(--g);color:#fff}.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#17211d;color:#fff;padding:12px 16px;border-radius:12px;display:none;z-index:80;box-shadow:0 8px 28px #0004}
 .idcard{border:2px solid var(--g);border-radius:18px;padding:16px;background:linear-gradient(145deg,#fff,#eef9f4)}.idcard .idnum{font-size:20px;font-weight:900;letter-spacing:1px;color:var(--g)}
@@ -34,6 +34,7 @@ h1,h2,h3{margin:0 0 8px}h1{font-size:27px}h2{font-size:20px}h3{font-size:16px}.m
 .click-debug{position:fixed;left:10px;bottom:10px;z-index:95;padding:7px 10px;border-radius:9px;background:#17211d;color:#fff;font-size:11px;display:none}
 @media(max-width:760px){.menuBtn{display:block}header nav{display:none}}
 
+.google-map-pin{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:#087a52;color:#fff;border:3px solid #fff;box-shadow:0 3px 12px #0004}.map-error{padding:14px;text-align:center;background:#fff5db;color:#795b00;height:100%;display:grid;place-items:center}
 </style>
 </head>
 <body>
@@ -80,9 +81,9 @@ h1,h2,h3{margin:0 0 8px}h1{font-size:27px}h2{font-size:20px}h3{font-size:16px}.m
 <div class="field" style="flex:1;min-width:160px"><label>Trip distance (km)</label><input id="distance" type="number" min="0.1" step="0.1" value="7.2"></div>
 <div class="field" style="flex:1;min-width:160px"><label>Estimated time (min)</label><input id="minutes" type="number" min="1" value="18"></div>
 </div>
-<div class="map"><svg viewBox="0 0 100 100" preserveAspectRatio="none"><path d="M0 72 C20 55,22 78,38 54 S62 25,100 35" fill="none" stroke="#b6d5c7" stroke-width="8"/><path d="M0 20 C25 45,38 15,55 40 S78 78,100 60" fill="none" stroke="#c9dfd5" stroke-width="5"/><path d="M12 90 L90 8 M8 25 L92 82" stroke="#d3e5de" stroke-width="2"/></svg><div class="marker pickup m1"></div><div class="marker dest m2"></div><div class="marker driver m3"></div></div>
+<div class="map" id="googleMap"><div class="muted" style="display:grid;place-items:center;height:100%">Loading Google Maps…</div></div>
 <div class="row between"><span class="muted" id="routeText">Estimated distance: 7.2 km • 18 min</span><b id="fare">₹0</b></div>
-<div class="row"><button class="primary" id="bookBtn">Request ride</button><button class="secondary" id="locBtn">Use current location</button></div>
+<div class="row"><button class="primary" id="bookBtn">Request ride</button><button class="secondary" id="locBtn">📍 Use current location</button><button class="ghost" id="routeBtn">🗺️ Calculate route</button></div><div class="small muted" id="locationStatus">Google Maps location is not connected yet.</div>
 <div class="small muted">Final fare is calculated from the backend route distance in production. This screen uses the entered distance until Maps/route API is connected.</div>
 </div>
 <div class="card span4 stack">
@@ -238,12 +239,117 @@ $('emailSupport')?.addEventListener('click',()=>{location.href='mailto:assamride
 $('logoutBtn').onclick=async()=>{if(supabase)await supabase.auth.signOut();state.session=null;state.drivers.forEach(d=>d.online=false);save();toast('Logged out')};
 $('driverRegisterBtn').onclick=()=>{if(!state.session||state.session.role!=='DRIVER'){openModal('authModal');chooseRole('DRIVER');toast('Login/register as Driver first')}else{const d=currentUser();$('regName').value=d.name;$('regPhone').value=d.phone;$('regVehicle').value=d.vehicle;$('regRc').value=d.registration;openModal('driverModal')}};
 $('onlineBtn').onclick=()=>{const d=currentUser();if(!d||state.session.role!=='DRIVER'){openModal('authModal');chooseRole('DRIVER');return}if(d.verification!=='APPROVED'){toast('Admin approval is required before going online');return}d.online=!d.online;save();toast(d.online?'Driver is online':'Driver is offline')};
-$('bookBtn').onclick=book;$('locBtn').onclick=()=>{if(!navigator.geolocation){toast('Location not supported');return}navigator.geolocation.getCurrentPosition(p=>toast('Location received. Maps backend will use it for route matching.'),()=>toast('Location permission not granted'))};
+$('bookBtn').onclick=book;$('locBtn').onclick=()=>startLocationWatch(true);$('routeBtn').onclick=calculateGoogleRoute;
 ['distance','minutes'].forEach(id=>$(id).oninput=renderFare);document.querySelectorAll('input[name=vehicle]').forEach(x=>x.onchange=renderFare);
 $('saveFare').onclick=()=>{state.fare.BIKE.km=+$('bikeRate').value||10;state.fare.AUTO.km=+$('autoRate').value||14;state.fare.CAR.km=+$('carRate').value||18;save();toast('Fare settings saved')};
 document.querySelectorAll('.navbtn[data-view]').forEach(b=>b.onclick=()=>{document.querySelectorAll('.navbtn').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));$(b.dataset.view).classList.add('active')});
+
+const GOOGLE_MAPS_KEY='AIzaSyAOVYRIgupAurZup5y1PRh8Ismb1A3lLao';
+let googleMap=null, googleGeocoder=null, googleRoute=null, googlePolylines=[], pickupMarker=null, destinationMarker=null, userLocationMarker=null, locationWatchId=null;
+let googleMapsLoaded=false;
+
+function setLocationStatus(msg,ok=false){const el=$('locationStatus');if(el){el.textContent=msg;el.className='small '+(ok?'success':'muted');}}
+function loadGoogleMaps(){
+  if(window.google?.maps){initMap();return}
+  if(document.getElementById('googleMapsScript'))return;
+  window.initMap=initMap;
+  const s=document.createElement('script');
+  s.id='googleMapsScript';
+  s.src='https://maps.googleapis.com/maps/api/js?key='+encodeURIComponent(GOOGLE_MAPS_KEY)+'&libraries=places,routes&v=weekly&callback=initMap';
+  s.async=true;s.defer=true;
+  s.onerror=()=>setLocationStatus('Google Maps could not load. Check API key, billing and API restrictions.');
+  document.head.appendChild(s);
+}
+function initMap(){
+  if(!window.google?.maps||!$('googleMap'))return;
+  googleMapsLoaded=true;
+  googleMap=new google.maps.Map($('googleMap'),{center:{lat:26.1445,lng:91.7362},zoom:12,mapTypeControl:false,streetViewControl:false,fullscreenControl:true,gestureHandling:'greedy'});
+  googleGeocoder=new google.maps.Geocoder();
+  setLocationStatus('Google Maps connected. Enter pickup and destination or use your current location.',true);
+  setupPlaceAutocomplete();
+  if(navigator.geolocation)startLocationWatch(false);
+}
+function setupPlaceAutocomplete(){
+  if(!google.maps.places?.Autocomplete)return;
+  ['pickup','destination'].forEach(id=>{
+    const el=$(id);if(!el||el.dataset.googleAutocomplete)return;
+    const ac=new google.maps.places.Autocomplete(el,{componentRestrictions:{country:'in'},fields:['geometry','formatted_address','name']});
+    ac.addListener('place_changed',()=>{
+      const p=ac.getPlace();
+      if(p.geometry?.location){el.dataset.lat=p.geometry.location.lat();el.dataset.lng=p.geometry.location.lng();if(p.formatted_address)el.value=p.formatted_address;updateMapMarkers();}
+    });
+    el.dataset.googleAutocomplete='1';
+  });
+}
+function coordsFromInput(id){
+  const el=$(id);
+  if(el?.dataset.lat&&el?.dataset.lng)return {lat:+el.dataset.lat,lng:+el.dataset.lng};
+  return null;
+}
+function geocodeInput(id){
+  const el=$(id),value=(el?.value||'').trim();
+  return new Promise((resolve,reject)=>{
+    const known=coordsFromInput(id);if(known)return resolve(known);
+    if(!value||!googleGeocoder)return reject(new Error('Location is empty'));
+    googleGeocoder.geocode({address:value,componentRestrictions:{country:'IN'}},(results,status)=>{
+      if(status==='OK'&&results[0]?.geometry?.location){
+        const p=results[0].geometry.location.toJSON();el.dataset.lat=p.lat;el.dataset.lng=p.lng;resolve(p);
+      }else reject(new Error('Location not found: '+status));
+    });
+  });
+}
+function placeMarker(pos,type,title){
+  if(!googleMap)return;
+  const opts={map:googleMap,position:pos,title};
+  const marker=new google.maps.Marker(opts);
+  if(type==='pickup'){if(pickupMarker)pickupMarker.setMap(null);pickupMarker=marker}
+  if(type==='destination'){if(destinationMarker)destinationMarker.setMap(null);destinationMarker=marker}
+  return marker;
+}
+function updateMapMarkers(){
+  const p=coordsFromInput('pickup'),d=coordsFromInput('destination');
+  if(p)placeMarker(p,'pickup','Pickup');
+  if(d)placeMarker(d,'destination','Destination');
+  if(p&&d)googleMap.fitBounds(new google.maps.LatLngBounds(p,d),80);
+}
+async function calculateGoogleRoute(){
+  if(!googleMapsLoaded){toast('Google Maps is still loading');return}
+  try{
+    const [p,d]=await Promise.all([geocodeInput('pickup'),geocodeInput('destination')]);
+    updateMapMarkers();
+    const {Route}=await google.maps.importLibrary('routes');
+    const v=vehicle();
+    const travelMode=v==='BIKE'?'TWO_WHEELER':'DRIVING';
+    const result=await Route.computeRoutes({origin:p,destination:d,travelMode,fields:['path','distanceMeters','durationMillis'],polylineQuality:'HIGH_QUALITY'});
+    if(!result.routes?.length)throw new Error('No road route found');
+    googlePolylines.forEach(x=>x.setMap(null));googlePolylines=result.routes[0].createPolylines({polylineOptions:{strokeOpacity:.9,strokeWeight:6}});
+    googlePolylines.forEach(x=>x.setMap(googleMap));
+    googleRoute=result.routes[0];
+    const km=(googleRoute.distanceMeters/1000);
+    const mins=Math.max(1,Math.round(googleRoute.durationMillis/60000));
+    $('distance').value=km.toFixed(1);$('minutes').value=mins;
+    renderFare();
+    setLocationStatus('Actual road route: '+km.toFixed(1)+' km • about '+mins+' min',true);
+    const bounds=new google.maps.LatLngBounds();(googleRoute.path||[]).forEach(x=>bounds.extend(x));googleMap.fitBounds(bounds,60);
+  }catch(e){console.error(e);setLocationStatus(e.message||'Could not calculate route');toast('Could not calculate Google route')}
+}
+function startLocationWatch(centerMap=true){
+  if(!navigator.geolocation){setLocationStatus('This device/browser does not support GPS.');return}
+  if(locationWatchId!==null)return;
+  navigator.geolocation.getCurrentPosition(p=>handleUserLocation(p,centerMap),()=>setLocationStatus('Location permission was not granted.'),{enableHighAccuracy:true,timeout:12000,maximumAge:5000});
+}
+function handleUserLocation(p,centerMap){
+  const pos={lat:p.coords.latitude,lng:p.coords.longitude};
+  $('pickup').value='Current location';$('pickup').dataset.lat=pos.lat;$('pickup').dataset.lng=pos.lng;
+  if(googleMap){
+    if(userLocationMarker)userLocationMarker.setPosition(pos);else userLocationMarker=new google.maps.Marker({map:googleMap,position:pos,title:'Your current location'});
+    if(centerMap)googleMap.setCenter(pos);
+  }
+  setLocationStatus('Current GPS location detected: '+pos.lat.toFixed(5)+', '+pos.lng.toFixed(5),true);
+}
+
 async function initSupabaseAuth(){if(!supabaseReady||!supabase){render();return}const {data}=await supabase.auth.getSession();if(data.session?.user){const role=data.session.user.user_metadata?.requested_role||state.session?.role||'CUSTOMER';await establishSupabaseUser(role,data.session.user)}supabase.auth.onAuthStateChange((event,session)=>{if(session?.user&&!state.session){const role=session.user.user_metadata?.requested_role||'CUSTOMER';establishSupabaseUser(role,session.user).then(()=>render())}else if(!session){state.session=null;render()}});render()}
-initSupabaseAuth();window.addEventListener('error',e=>{console.error(e.error||e.message);const d=$('clickDebug');if(d){d.textContent='App error: '+(e.message||'Unknown error');d.style.display='block';d.style.background='#a61e1e'}});
+loadGoogleMaps();initSupabaseAuth();window.addEventListener('error',e=>{console.error(e.error||e.message);const d=$('clickDebug');if(d){d.textContent='App error: '+(e.message||'Unknown error');d.style.display='block';d.style.background='#a61e1e'}});
 window.addEventListener('unhandledrejection',e=>{console.error(e.reason);const d=$('clickDebug');if(d){d.textContent='App error: '+(e.reason?.message||'Promise error');d.style.display='block';d.style.background='#a61e1e'}});
 document.addEventListener('click',e=>{const b=e.target.closest('button');if(b&&!b.disabled){console.debug('Assam Drive click:',b.textContent.trim()||b.id)}},true);
 
