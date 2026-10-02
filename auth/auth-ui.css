@@ -1,0 +1,2 @@
+/* Assam Drive authentication UI — isolated styles */
+.auth-shell{width:min(620px,100%);margin:auto}.auth-actions{display:grid;gap:12px}.auth-actions button{width:100%;min-height:58px;touch-action:manipulation;pointer-events:auto}.auth-role{min-height:120px!important}.auth-status{min-height:20px}
