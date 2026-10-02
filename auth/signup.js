@@ -44,7 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    if (!/^[^\s@]+@[^\s@]+\\.[^\s@]+$/.test(email)) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       setStatus('Please enter a valid Gmail/email address.');
       $('email').focus();
       return;
