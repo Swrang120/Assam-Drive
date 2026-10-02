@@ -104,10 +104,11 @@ body.login-screen .login-gate{min-height:100dvh;background:#070707;color:#fff;di
 <img class="login-logo" src="./assets/assam-drive-logo.jpg" alt="Assam Drive">
 <div class="login-brand">Assam Drive</div>
 <div class="login-title">Get Started</div>
-<div class="login-phone"><div class="country">+91⌄</div><input id="loginGatePhone" inputmode="tel" autocomplete="tel" placeholder="Enter mobile number"></div>
-<button class="login-otp" id="loginGateOtp" type="button">GET OTP</button>
+<div class="login-phone" style="grid-template-columns:1fr"><input id="loginGateEmail" type="email" autocomplete="email" placeholder="Enter Gmail / email address"></div>
+<button class="login-otp" id="loginGateOtp" type="button">GET EMAIL OTP</button>
 <div class="login-status" id="loginGateStatus"></div>
-<div class="login-actions"><button type="button" class="secondary" onclick="openPasswordLogin('CUSTOMER')">🔐 Login with Password</button><button type="button" class="ghost" onclick="chooseRole('CUSTOMER');gateSetStatus('Create your account with OTP, then set a password.',true)">🆕 Create Account</button></div><div class="login-or">OR CONTINUE WITH</div>
+<div class="small" style="color:#77737d;margin-top:6px">Email OTP is enabled for free testing. Mobile SMS OTP will be activated later when an SMS provider is connected.</div>
+<div class="login-actions"><button type="button" class="secondary" onclick="openPasswordLogin('CUSTOMER','EMAIL')">🔐 Login with Password</button><button type="button" class="ghost" onclick="chooseRole('CUSTOMER');gateSetStatus('Create your account with OTP, then set a password.',true)">🆕 Create Account</button></div><div class="login-or">OR CONTINUE WITH</div>
 <div class="login-alt">
 <button type="button" onclick="gateGoogleLogin()">G <span>Google</span></button>
 <button type="button" onclick="gateEmailLogin()">✉ <span>Email</span></button>
@@ -274,13 +275,16 @@ function render(){
 function esc(x){return String(x??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function gateSetStatus(msg,ok=false){const el=$('loginGateStatus');if(el){el.textContent=msg;el.style.color=ok?'#9be2c0':'#ffb5b5'}}
 async function gateSendOtp(){
- const raw=($('loginGatePhone')?.value||'').trim(),digits=raw.replace(/\D/g,'');const p=digits.length===10?'+91'+digits:raw.replace(/[\s()-]/g,'');
- if(!/^\+91\d{10}$/.test(p)){gateSetStatus('Enter a 10-digit Indian mobile number');return}
+ const email=($('loginGateEmail')?.value||'').trim().toLowerCase();
+ if(!/^\S+@\S+\.\S+$/.test(email)){gateSetStatus('Enter a valid email address');return}
  if(!supabaseReady||!supabase){gateSetStatus('Login service is still loading. Please try again.');return}
- gateSetStatus('Sending OTP…',true);
- const {error}=await supabase.auth.signInWithOtp({phone:p,options:{data:{requested_role:'CUSTOMER'}}});
+ gateSetStatus('Sending email OTP…',true);
+ const {error}=await supabase.auth.signInWithOtp({email,options:{data:{requested_role:'CUSTOMER'}}});
  if(error){gateSetStatus(error.message);return}
- const btn=$('loginGateOtp');btn.textContent='OTP SENT — OPEN LOGIN';btn.classList.add('ready');btn.onclick=()=>{openModal('authModal');startOtpSignup('CUSTOMER');$('authPhone').value=p};gateSetStatus('OTP sent. Enter it in the verification screen.',true);
+ const btn=$('loginGateOtp');btn.textContent='OTP SENT — OPEN VERIFICATION';btn.classList.add('ready');btn.onclick=()=>{openModal('authModal');verifyEmailGateForm(email)};gateSetStatus('OTP sent to your email. Enter the code in the verification screen.',true);
+}
+function verifyEmailGateForm(email){
+ $('authForm').innerHTML='<div class="stack"><div class="success">Verification code sent to '+esc(email)+'</div><div class="field"><label>Email OTP</label><input id="authEmailOtp" maxlength="6" inputmode="numeric" autocomplete="one-time-code" class="login-password" placeholder="6-digit code"></div><button class="primary" type="button" onclick="verifyEmailSignup(\'CUSTOMER\',\''+encodeURIComponent(email)+'\')">Verify & continue</button><button class="ghost" type="button" onclick="startEmailSignup(\'CUSTOMER\')">Change email</button></div>';
 }
 async function gateGoogleLogin(){
  if(!supabaseReady||!supabase){gateSetStatus('Login service is still loading. Please try again.');return}
@@ -389,7 +393,7 @@ function verifyOtp(){const r=state.rides.find(x=>x.driverId===state.session.id&&
 function completeRide(){const r=activeRide();if(!r||r.status!=='RIDE_STARTED')return;r.status='COMPLETED';const d=state.drivers.find(x=>x.id===r.driverId);if(d)d.earn+=r.fare;save();toast('Ride completed')}
 function sos(){toast('SOS event logged. Connect emergency call/contacts before production launch.')}
 $('loginGateOtp').onclick=gateSendOtp;
-$('loginGatePhone').addEventListener('input',()=>{const digits=$('loginGatePhone').value.replace(/\D/g,'');$('loginGateOtp').classList.toggle('ready',digits.length===10);});
+$('loginGateEmail').addEventListener('input',()=>{const email=$('loginGateEmail').value.trim();$('loginGateOtp').classList.toggle('ready',/^\S+@\S+\.\S+$/.test(email));});
 $('authBtn').onclick=()=>{openModal('authModal');chooseRole(state.session?.role||'CUSTOMER')};
 $('menuBtn')?.addEventListener('click',openSide);
 $('sideClose')?.addEventListener('click',closeSide);
