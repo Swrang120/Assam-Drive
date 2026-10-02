@@ -42,6 +42,7 @@ create table if not exists public.ride_status_history(
 create table if not exists public.ride_otp(
  ride_id bigint primary key references public.rides(id) on delete cascade,
  otp_hash text not null,
+ customer_otp text,
  attempts integer not null default 0,
  expires_at timestamptz not null,
  verified_at timestamptz
@@ -147,6 +148,9 @@ alter table public.fare_settings enable row level security;
 alter table public.ride_status_history enable row level security;
 alter table public.ride_otp enable row level security;
 alter table public.ride_location_updates enable row level security;
+alter table public.ride_otp enable row level security;
+drop policy if exists ride_otp_customer on public.ride_otp;
+create policy ride_otp_customer on public.ride_otp for select using(exists(select 1 from public.rides r where r.id=ride_id and r.customer_id=auth.uid()));
 alter table public.payments enable row level security;
 alter table public.driver_earnings enable row level security;
 alter table public.ratings enable row level security;
@@ -239,18 +243,19 @@ end $$;
 
 create or replace function public.accept_ride(p_ride_id bigint)
 returns rides language plpgsql security definer set search_path=public as $$
-declare uid uuid:=auth.uid(); r rides%rowtype; d driver_profiles%rowtype;
+declare uid uuid:=auth.uid(); r rides%rowtype; d driver_profiles%rowtype; otp text;
 begin
  select * into d from driver_profiles where id=uid for update;
  if not found or not d.verified or not d.online then raise exception 'Driver is not approved/online'; end if;
  select * into r from rides where id=p_ride_id for update;
  if not found or r.status<>'SEARCHING' or r.driver_id is not null then raise exception 'Ride is no longer available'; end if;
  update rides set driver_id=uid,status='OTP_PENDING',accepted_at=now(),driver_phone_snapshot=(select phone from profiles where id=uid) where id=p_ride_id returning * into r;
- insert into ride_otp(ride_id,otp_hash,expires_at) values(r.id,encode(digest(lpad(floor(random()*10000)::int::text,4,'0'),'sha256'),'hex'),now()+interval '10 minutes')
+ otp:=lpad(floor(random()*10000)::int::text,4,'0');
+ insert into ride_otp(ride_id,otp_hash,customer_otp,expires_at) values(r.id,encode(digest(otp,'sha256'),'hex'),otp,now()+interval '10 minutes')
  on conflict(ride_id) do update set otp_hash=excluded.otp_hash,attempts=0,expires_at=excluded.expires_at,verified_at=null;
  -- replace hash with deterministic generated OTP stored temporarily in notification payload is not safe, so create OTP separately below
  insert into ride_status_history(ride_id,status,actor_id) values(r.id,'OTP_PENDING',uid);
- insert into notifications(user_id,type,title,body,data) values(r.customer_id,'RIDE_ASSIGNED','Driver assigned','A verified driver accepted your ride',jsonb_build_object('ride_id',r.id));
+ insert into notifications(user_id,type,title,body,data) values(r.customer_id,'RIDE_ASSIGNED','Driver assigned','Your ride is assigned. OTP: '||otp,jsonb_build_object('ride_id',r.id,'otp',otp));
  return r;
 end $$;
 
