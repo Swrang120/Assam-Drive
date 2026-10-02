@@ -11,7 +11,7 @@
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px system-ui,-apple-system,Segoe UI,Roboto,sans-serif}button,input,select{font:inherit}button{border:0;cursor:pointer}.app{min-height:100vh;max-width:1120px;margin:auto}
 header{position:sticky;top:0;z-index:20;background:#fffffff2;backdrop-filter:blur(12px);border-bottom:1px solid var(--line);padding:11px 15px;display:flex;gap:12px;align-items:center;justify-content:space-between}.brand{display:flex;align-items:center;gap:10px;font-weight:800}.logo{width:40px;height:40px;border-radius:13px;background:linear-gradient(135deg,var(--g),var(--g2));display:grid;place-items:center;color:#fff;font-size:21px}
 nav{display:flex;gap:6px;flex-wrap:wrap}.navbtn,.primary,.secondary,.danger,.ghost{padding:10px 13px;border-radius:11px;font-weight:750}.navbtn{background:#edf3f0;color:#30413a}.navbtn.active,.primary{background:var(--g);color:#fff}.secondary{background:#e7f5ef;color:var(--g)}.danger{background:#fdeaea;color:var(--danger)}.ghost{background:transparent;color:var(--g);border:1px solid var(--line)}
-main{padding:16px}.view{display:none}.view.active{display:block}.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:0 8px 28px #12331d10}.span3{grid-column:span 3}.span4{grid-column:span 4}.span6{grid-column:span 6}.span8{grid-column:span 8}.span12{grid-column:span 12}
+main{padding:16px}.view{display:none}.view.active{display:block}.admin-private{display:none!important}.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:0 8px 28px #12331d10}.span3{grid-column:span 3}.span4{grid-column:span 4}.span6{grid-column:span 6}.span8{grid-column:span 8}.span12{grid-column:span 12}
 h1,h2,h3{margin:0 0 8px}h1{font-size:27px}h2{font-size:20px}h3{font-size:16px}.muted{color:var(--muted)}.small{font-size:12px}.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.between{justify-content:space-between}.stack{display:grid;gap:10px}.field label{display:block;font-weight:700;margin-bottom:5px}.field input,.field select{width:100%;padding:12px;border:1px solid var(--line);border-radius:11px;background:#fff;outline:none}.field input:focus,.field select:focus{border-color:var(--g)}
 .hero{background:linear-gradient(135deg,#087a52,#126f59);color:#fff;border-radius:22px;padding:22px}.hero p{color:#d9f4e9}.notice{padding:11px 13px;border-radius:12px;background:#fff8df;color:#795b00;border:1px solid #f0dda0}.success{padding:11px 13px;border-radius:12px;background:#e8f7ef;color:#087548;border:1px solid #c8ead8}
 .vehicle{display:flex;gap:10px}.vehicle label{flex:1}.vehicle input{display:none}.vehicle span{display:block;padding:12px;text-align:center;border:1px solid var(--line);border-radius:12px;font-weight:700}.vehicle input:checked+span{border-color:var(--g);background:#e9f7f1;color:var(--g)}
@@ -44,7 +44,6 @@ h1,h2,h3{margin:0 0 8px}h1{font-size:27px}h2{font-size:20px}h3{font-size:16px}.m
 <button type="button" class="menuBtn" id="menuBtn" aria-label="Open menu" onclick="document.getElementById('sidemenu').classList.add('show');document.getElementById('sideback').classList.add('show')">☰</button><nav>
 <button class="navbtn active" data-view="customer">Customer</button>
 <button class="navbtn" data-view="driver">Driver</button>
-<button class="navbtn" data-view="admin">Admin</button>
 <button class="navbtn" id="authBtn">Login / Register</button>
 <button class="navbtn" id="logoutBtn" style="display:none">Logout</button>
 </nav>
@@ -54,7 +53,6 @@ h1,h2,h3{margin:0 0 8px}h1{font-size:27px}h2{font-size:20px}h3{font-size:16px}.m
   <div class="sidehead"><div class="sidebrand"><div class="sideicon">🚗</div><div>Assam Drive<div class="small muted">Premium ride support</div></div></div><button type="button" class="ghost" id="sideClose" onclick="document.getElementById('sidemenu').classList.remove('show');document.getElementById('sideback').classList.remove('show')">✕</button></div>
   <button type="button" class="sideitem" data-side="customer" onclick="document.querySelectorAll('.view').forEach(x=>x.classList.toggle('active',x.id==='customer'));document.querySelectorAll('.navbtn[data-view]').forEach(x=>x.classList.toggle('active',x.dataset.view==='customer'));document.getElementById('sidemenu').classList.remove('show');document.getElementById('sideback').classList.remove('show')"><span>🏠</span><span>Customer Home</span></button>
   <button type="button" class="sideitem" data-side="driver" onclick="document.querySelectorAll('.view').forEach(x=>x.classList.toggle('active',x.id==='driver'));document.querySelectorAll('.navbtn[data-view]').forEach(x=>x.classList.toggle('active',x.dataset.view==='driver'));document.getElementById('sidemenu').classList.remove('show');document.getElementById('sideback').classList.remove('show')"><span>🚗</span><span>Driver Partner</span></button>
-  <button type="button" class="sideitem" data-side="admin" onclick="document.querySelectorAll('.view').forEach(x=>x.classList.toggle('active',x.id==='admin'));document.querySelectorAll('.navbtn[data-view]').forEach(x=>x.classList.toggle('active',x.dataset.view==='admin'));document.getElementById('sidemenu').classList.remove('show');document.getElementById('sideback').classList.remove('show')"><span>🛡️</span><span>Admin</span></button>
   <button class="sideitem" id="sideProfile"><span>👤</span><span>My Profile</span></button>
   <button class="sideitem" id="sidePrivacy"><span>🔒</span><span>Privacy Policy</span></button>
   <button class="sideitem" id="sideAbout"><span>ℹ️</span><span>About Assam Drive</span></button>
@@ -64,7 +62,8 @@ h1,h2,h3{margin:0 0 8px}h1{font-size:27px}h2{font-size:20px}h3{font-size:16px}.m
   <div class="sidefoot"><b>Customer Support</b><div class="small muted" style="margin-top:4px">assamridesupport@gmail.com</div><button class="secondary" id="emailSupport" style="margin-top:10px;width:100%">✉️ Email support</button></div>
 </aside>
 <main>
-<section id="customer" class="view active">
+<section id="loginGate" class="view active"><div class="hero"><h1>Welcome to Assam Drive</h1><p>Please login or register first. Your Customer or Driver home will appear after mobile OTP verification.</p><div class="row" style="margin-top:16px"><button class="primary" onclick="openModal('authModal');chooseRole('CUSTOMER')">👤 Customer Login / Register</button><button class="secondary" onclick="openModal('authModal');chooseRole('DRIVER')">🚗 Driver Login / Register</button></div></div></section>
+<section id="customer" class="view">
 <div class="hero"><h1>Book a ride in Assam</h1><p>Register with mobile OTP, choose Bike / Auto / Car and pay according to the actual trip distance.</p></div>
 <div class="grid" style="margin-top:14px">
 <div class="card span8 stack">
@@ -84,7 +83,7 @@ h1,h2,h3{margin:0 0 8px}h1{font-size:27px}h2{font-size:20px}h3{font-size:16px}.m
 <div class="map" id="googleMap"><div class="muted" style="display:grid;place-items:center;height:100%">Loading Google Maps…</div></div>
 <div class="row between"><span class="muted" id="routeText">Estimated distance: 7.2 km • 18 min</span><b id="fare">₹0</b></div>
 <div class="row"><button class="primary" id="bookBtn">Request ride</button><button class="secondary" id="locBtn">📍 Use current location</button><button class="ghost" id="routeBtn">🗺️ Calculate route</button></div><div class="small muted" id="locationStatus">Google Maps location is not connected yet.</div>
-<div class="small muted">Final fare is calculated from the backend route distance in production. This screen uses the entered distance until Maps/route API is connected.</div>
+<div class="small muted">Fare is based on actual road distance (KM). Google Maps route distance is used when route calculation succeeds.</div>
 </div>
 <div class="card span4 stack">
 <h2>Customer profile</h2><div id="customerProfile"></div>
@@ -107,7 +106,7 @@ h1,h2,h3{margin:0 0 8px}h1{font-size:27px}h2{font-size:20px}h3{font-size:16px}.m
 </div>
 </section>
 
-<section id="admin" class="view">
+<section id="admin" class="view admin-private">
 <div class="grid">
 <div class="card span12"><h1>Admin Dashboard</h1><div class="muted">Customer, driver, documents, rides and fare operations.</div></div>
 <div class="stat span3"><span class="muted">Customers</span><b id="adminCustomers">0</b></div><div class="stat span3"><span class="muted">Drivers</span><b id="adminDrivers">0</b></div><div class="stat span3"><span class="muted">Online</span><b id="adminOnline">0</b></div><div class="stat span3"><span class="muted">Completed</span><b id="adminDone">0</b></div>
@@ -148,7 +147,7 @@ h1,h2,h3{margin:0 0 8px}h1{font-size:27px}h2{font-size:20px}h3{font-size:16px}.m
 
 <div class="modal" id="profileModal"><div class="modalbox stack">
 <div class="row between"><h2>Edit profile</h2><button class="ghost" onclick="closeModal('profileModal')">✕</button></div>
-<div class="field"><label>Name</label><input id="profileName"></div><div class="field"><label>Phone</label><input id="profilePhone" inputmode="tel"></div><div class="field"><label>Profile photo</label><input id="profilePhoto" type="file" accept="image/*"></div>
+<div class="field"><label>Name</label><input id="profileName"></div><div class="field"><label>Phone</label><input id="profilePhone" inputmode="tel" readonly><div class="small muted">Mobile number is tied to OTP login; changing it requires a new OTP verification.</div></div><div class="field"><label>Profile photo</label><input id="profilePhoto" type="file" accept="image/*"></div>
 <button class="primary" onclick="saveProfile()">Save profile</button><div class="small muted">Customer can update name/photo later. Production backend should audit sensitive phone-number changes.</div>
 </div></div>
 <div class="toast" id="toast"></div><div class="click-debug" id="clickDebug">Assam Drive ready</div>
@@ -176,7 +175,16 @@ if(!Number.isFinite(+state.seq))state.seq=1001;
 if(!state.drivers.length)state.drivers.push(JSON.parse(JSON.stringify(defaults.drivers[0])));
 state.drivers.forEach(d=>{d.documents=Array.isArray(d.documents)?d.documents:[];d.checks=Array.isArray(d.checks)?d.checks:[];d.earn=Number.isFinite(+d.earn)?+d.earn:0;d.verification=d.verification||'PENDING';d.online=!!d.online;d.vehicle=d.vehicle||'BIKE';d.registration=d.registration||'';d.phone=d.phone||'';d.name=d.name||'Driver'});
 const $=id=>document.getElementById(id);
-const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){console.warn('Local save failed',e)}render()};
+async function syncCurrentUserToSupabase(){
+ const u=currentUser();if(!u||!supabaseReady||!supabase)return;
+ try{
+  const a=await supabase.auth.updateUser({data:{name:u.name||'',avatar_url:u.photo||'',role:state.session.role}});
+  if(a.error)console.warn('Auth profile sync:',a.error.message);
+  const q=await supabase.from('profiles').upsert({id:u.id,role:state.session.role,full_name:u.name||'',phone:u.phone||'',avatar_url:u.photo||null,updated_at:new Date().toISOString()},{onConflict:'id'});
+  if(q.error)console.warn('Supabase profile sync:',q.error.message);
+ }catch(e){console.warn('Supabase sync failed',e)}
+}
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){console.warn('Local save failed',e)}render();syncCurrentUserToSupabase()};
 function toast(x){const t=$('toast');t.textContent=x;t.style.display='block';clearTimeout(window.__toast);window.__toast=setTimeout(()=>t.style.display='none',2300)}
 function openModal(id){const el=$(id);if(el)el.classList.add('show')} function closeModal(id){const el=$(id);if(el)el.classList.remove('show')}
 function openSide(){ $('sidemenu')?.classList.add('show'); $('sideback')?.classList.add('show') }
@@ -189,6 +197,11 @@ function estimate(){const v=vehicle(),km=Math.max(.1,+$('distance').value||0),mi
 function renderFare(){$('fare').textContent='₹'+Math.round(estimate());$('routeText').textContent='Estimated distance: '+(+($('distance').value||0)).toFixed(1)+' km • '+(+($('minutes').value||0))+' min';$('bikeRateLabel').textContent='₹'+state.fare.BIKE.km+'/km';$('autoRateLabel').textContent='₹'+state.fare.AUTO.km+'/km';$('carRateLabel').textContent='₹'+state.fare.CAR.km+'/km'}
 function render(){
  renderFare();
+ const logged=!!state.session;
+ $('loginGate').classList.toggle('active',!logged);
+ $('customer').classList.toggle('active',logged&&state.session.role==='CUSTOMER');
+ $('driver').classList.toggle('active',logged&&state.session.role==='DRIVER');
+ $('admin').classList.remove('active');
  const u=currentUser(), ar=activeRide();
  $('authBtn').style.display=u?'none':'block';$('logoutBtn').style.display=u?'block':'none';
  $('customerLoginNotice').style.display=state.session&&state.session.role==='CUSTOMER'?'none':'block';
@@ -210,7 +223,7 @@ async function sendOtp(role){if(!supabaseReady||!supabase){toast('Login service 
 async function verifyAuth(role,ep){if(!supabaseReady||!supabase){toast('Login service is unavailable right now.');return}const p=decodeURIComponent(ep),otp=($('authOtp').value||'').replace(/\D/g,'');if(otp.length!==6){toast('Enter the 6-digit OTP');return}const {data,error}=await supabase.auth.verifyOtp({phone:p,token:otp,type:'sms'});if(error){toast(error.message);return}await establishSupabaseUser(role,data.user);closeModal('authModal');save();toast(role==='CUSTOMER'?'Customer login successful':'Driver login successful')}
 async function establishSupabaseUser(role,user){if(!user)return;const phone=user.phone||'';if(role==='CUSTOMER'){let u=state.customers.find(x=>x.id===user.id)||state.customers.find(x=>x.phone===phone);if(!u){u={id:user.id,name:user.user_metadata?.name||'New Customer',phone,photo:''};state.customers.push(u)}else{u.id=user.id;u.phone=phone}state.session={role:'CUSTOMER',id:u.id}}else{let d=state.drivers.find(x=>x.id===user.id)||state.drivers.find(x=>x.phone===phone);if(!d){d={id:user.id,name:user.user_metadata?.name||'New Driver',phone,vehicle:'BIKE',registration:'',verified:false,verification:'PENDING',online:false,earn:0,photo:'',documents:[],checks:[]};state.drivers.push(d)}else{d.id=user.id;d.phone=phone}state.session={role:'DRIVER',id:d.id}}}
 function editProfile(){const u=currentUser();$('profileName').value=u.name;$('profilePhone').value=u.phone;openModal('profileModal')}
-function saveProfile(){const u=currentUser();if(!u)return;u.name=$('profileName').value.trim()||u.name;u.phone=$('profilePhone').value.trim()||u.phone;const f=$('profilePhoto').files[0];if(f){const rd=new FileReader();rd.onload=()=>{u.photo=rd.result;closeModal('profileModal');save()};rd.readAsDataURL(f)}else{closeModal('profileModal');save()}toast('Profile updated')}
+function saveProfile(){const u=currentUser();if(!u)return;u.name=$('profileName').value.trim()||u.name;const f=$('profilePhoto').files[0];if(f){const rd=new FileReader();rd.onload=()=>{u.photo=rd.result;closeModal('profileModal');save()};rd.readAsDataURL(f)}else{closeModal('profileModal');save()}toast('Profile updated')}
 function submitDriverRegistration(){const d=currentUser();if(!d||state.session.role!=='DRIVER'){toast('Login as Driver first');return}d.name=$('regName').value.trim()||d.name;d.phone=$('regPhone').value.trim()||d.phone;d.vehicle=$('regVehicle').value;d.registration=$('regRc').value.trim();d.verification='UNDER_REVIEW';d.online=false;d.documents=[];['regDl','regId','regRcDoc','regInsurance','regPuc','regPermit','regVehiclePhoto'].forEach(id=>{const f=$(id).files[0];if(f)d.documents.push($(id).previousElementSibling.textContent||id)});d.checks=runPrecheck();closeModal('driverModal');save();toast('Documents submitted for admin verification')}
 function runPrecheck(){const d=currentUser(),checks=[];if(!d.name)checks.push('name missing');if(!d.registration)checks.push('vehicle registration missing');if($('regDl').files.length===0)checks.push('licence missing');if($('regRcDoc').files.length===0)checks.push('RC missing');if($('regInsurance').files.length===0)checks.push('insurance missing');if($('regPuc').files.length===0)checks.push('PUC missing');return checks.length?checks:['basic fields present'];}
 function approveDriver(id){const d=state.drivers.find(x=>x.id===id);if(!d)return;d.verification='APPROVED';d.verified=true;d.online=false;if(!d.id.startsWith('DRV-'))d.id=d.id;save();toast('Driver approved; ID card generated')}
@@ -242,7 +255,7 @@ $('onlineBtn').onclick=()=>{const d=currentUser();if(!d||state.session.role!=='D
 $('bookBtn').onclick=book;$('locBtn').onclick=()=>startLocationWatch(true);$('routeBtn').onclick=calculateGoogleRoute;
 ['distance','minutes'].forEach(id=>$(id).oninput=renderFare);document.querySelectorAll('input[name=vehicle]').forEach(x=>x.onchange=renderFare);
 $('saveFare').onclick=()=>{state.fare.BIKE.km=+$('bikeRate').value||10;state.fare.AUTO.km=+$('autoRate').value||14;state.fare.CAR.km=+$('carRate').value||18;save();toast('Fare settings saved')};
-document.querySelectorAll('.navbtn[data-view]').forEach(b=>b.onclick=()=>{document.querySelectorAll('.navbtn').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));$(b.dataset.view).classList.add('active')});
+document.querySelectorAll('.navbtn[data-view]').forEach(b=>b.onclick=()=>{if(!state.session){openModal('authModal');chooseRole(b.dataset.view==='driver'?'DRIVER':'CUSTOMER');return}if(b.dataset.view.toUpperCase()!==state.session.role){toast('Please use the correct account type');return}render()});
 
 const GOOGLE_MAPS_KEY='AIzaSyAOVYRIgupAurZup5y1PRh8Ismb1A3lLao';
 let googleMap=null, googleGeocoder=null, googleRoute=null, googlePolylines=[], pickupMarker=null, destinationMarker=null, userLocationMarker=null, locationWatchId=null;
