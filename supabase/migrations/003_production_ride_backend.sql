@@ -406,3 +406,17 @@ end $$;
 
 grant execute on function public.get_driver_ride_queue() to authenticated;
 grant execute on function public.claim_ride(bigint) to authenticated;
+
+
+alter table public.profiles drop constraint if exists profiles_role_check;
+alter table public.profiles add constraint profiles_role_check check(role in('CUSTOMER','DRIVER','ADMIN','SUPER_ADMIN'));
+
+create table if not exists public.admin_users(
+ id uuid primary key references auth.users(id) on delete cascade,
+ role text not null check(role in('ADMIN','SUPER_ADMIN')),
+ active boolean not null default true,
+ created_at timestamptz not null default now()
+);
+alter table public.admin_users enable row level security;
+drop policy if exists admin_self on public.admin_users;
+create policy admin_self on public.admin_users for select using(auth.uid()=id);
