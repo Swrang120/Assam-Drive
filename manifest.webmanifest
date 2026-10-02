@@ -8,6 +8,6 @@
   "theme_color":"#087a52",
   "description":"Assam Drive — Bike, Auto and Car ride booking for Assam.",
   "icons":[
-    {"src":"./assets/assam-ride-logo.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}
+    {"src":"./assets/assam-drive-logo.jpg","sizes":"any","type":"image/jpeg","purpose":"any maskable"}
   ]
 }
