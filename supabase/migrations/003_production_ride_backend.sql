@@ -215,6 +215,7 @@ begin
  select * into d from driver_profiles where id=uid for update;
  if not found then raise exception 'Driver profile not found'; end if;
  if p_online and not d.verified then raise exception 'Driver is not approved'; end if;
+ if p_online and (p_lat is null or p_lng is null) then raise exception 'GPS location is required before going online'; end if;
  update driver_profiles set online=p_online,current_lat=coalesce(p_lat,current_lat),current_lng=coalesce(p_lng,current_lng),last_seen_at=now(),updated_at=now() where id=uid returning * into d;
  insert into audit_logs(actor_id,action,entity_type,entity_id,metadata) values(uid,case when p_online then 'DRIVER_ONLINE' else 'DRIVER_OFFLINE' end,'driver',uid::text,'{}');
  return to_jsonb(d);
