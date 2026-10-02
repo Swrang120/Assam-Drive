@@ -20,16 +20,16 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   $('phone').addEventListener('input', e => {
-    e.target.value = e.target.value.replace(/\\D/g, '').slice(0, 10);
+    e.target.value = e.target.value.replace(/\D/g, '').slice(0, 10);
   });
 
   $('otp').addEventListener('input', e => {
-    e.target.value = e.target.value.replace(/\\D/g, '').slice(0, 6);
+    e.target.value = e.target.value.replace(/\D/g, '').slice(0, 6);
   });
 
   $('send').addEventListener('click', async () => {
     const name = $('name').value.trim();
-    const phone = $('phone').value.replace(/\\D/g, '');
+    const phone = $('phone').value.replace(/\D/g, '');
     const email = $('email').value.trim().toLowerCase();
 
     if (name.length < 2) {
@@ -44,7 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) {
+    if (!/^[^\s@]+@[^\s@]+\\.[^\s@]+$/.test(email)) {
       setStatus('Please enter a valid Gmail/email address.');
       $('email').focus();
       return;
@@ -85,7 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   $('verify').addEventListener('click', async () => {
     const email = $('email').value.trim().toLowerCase();
-    const token = $('otp').value.replace(/\\D/g, '');
+    const token = $('otp').value.replace(/\D/g, '');
 
     if (token.length !== 6) {
       setStatus('Enter the 6-digit OTP received in Gmail.');
@@ -143,7 +143,7 @@ document.addEventListener('DOMContentLoaded', () => {
         data: {
           requested_role: role,
           full_name: $('name').value.trim(),
-          mobile_number: '+91' + $('phone').value.replace(/\\D/g, '')
+          mobile_number: '+91' + $('phone').value.replace(/\D/g, '')
         }
       });
 
