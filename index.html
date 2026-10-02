@@ -274,8 +274,8 @@ function render(){
 function esc(x){return String(x??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function gateSetStatus(msg,ok=false){const el=$('loginGateStatus');if(el){el.textContent=msg;el.style.color=ok?'#9be2c0':'#ffb5b5'}}
 async function gateSendOtp(){
- const raw=($('loginGatePhone')?.value||'').trim(),p=raw.replace(/[\s()-]/g,'');
- if(!/^\+91\d{10}$/.test(p)){gateSetStatus('Enter mobile number like +919876543210');return}
+ const raw=($('loginGatePhone')?.value||'').trim(),digits=raw.replace(/\D/g,'');const p=digits.length===10?'+91'+digits:raw.replace(/[\s()-]/g,'');
+ if(!/^\+91\d{10}$/.test(p)){gateSetStatus('Enter a 10-digit Indian mobile number');return}
  if(!supabaseReady||!supabase){gateSetStatus('Login service is still loading. Please try again.');return}
  gateSetStatus('Sending OTP…',true);
  const {error}=await supabase.auth.signInWithOtp({phone:p,options:{data:{requested_role:'CUSTOMER'}}});
@@ -310,7 +310,7 @@ function verifyOtp(){const r=state.rides.find(x=>x.driverId===state.session.id&&
 function completeRide(){const r=activeRide();if(!r||r.status!=='RIDE_STARTED')return;r.status='COMPLETED';const d=state.drivers.find(x=>x.id===r.driverId);if(d)d.earn+=r.fare;save();toast('Ride completed')}
 function sos(){toast('SOS event logged. Connect emergency call/contacts before production launch.')}
 $('loginGateOtp').onclick=gateSendOtp;
-$('loginGatePhone').addEventListener('input',()=>{const p=$('loginGatePhone').value.replace(/[\s()-]/g,'');$('loginGateOtp').classList.toggle('ready',/^\+91\d{10}$/.test(p));});
+$('loginGatePhone').addEventListener('input',()=>{const digits=$('loginGatePhone').value.replace(/\D/g,'');$('loginGateOtp').classList.toggle('ready',digits.length===10);});
 $('authBtn').onclick=()=>{openModal('authModal');chooseRole(state.session?.role||'CUSTOMER')};
 $('menuBtn')?.addEventListener('click',openSide);
 $('sideClose')?.addEventListener('click',closeSide);
