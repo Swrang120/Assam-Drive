@@ -50,6 +50,7 @@ h1,h2,h3{margin:0 0 8px}h1{font-size:27px}h2{font-size:20px}h3{font-size:16px}.m
 /* Branded login screen */
 body.login-screen{background:#070707;color:#fff}
 body.login-screen header{display:none}
+body.login-screen .app > header,body.login-screen .app > .sideback,body.login-screen .app > .sidemenu{display:none!important;pointer-events:none!important}
 body.login-screen main{padding:0}
 /* Never allow the authenticated app side-menu overlay to cover the public login screen. */
 body.login-screen .sidemenu,body.login-screen .sideback{display:none!important;pointer-events:none!important}
@@ -238,7 +239,7 @@ const $=id=>document.getElementById(id);
 document.body.classList.add('login-screen');
 $('sidemenu')?.style.setProperty('display','none','important');
 $('sideback')?.style.setProperty('display','none','important');
-window.__openCreateAccount=function(e){if(e){e.preventDefault();e.stopPropagation()}try{openModal('authModal');chooseRole('CUSTOMER');gateSetStatus('Create your account with Name, mobile number, Gmail OTP and password.',true)}catch(err){console.error('Create Account error',err);const s=$('loginGateStatus');if(s)s.textContent='Please try again. App error: '+(err?.message||'unknown')}};
+window.__openCreateAccount=function(e){if(e){e.preventDefault();e.stopPropagation()}try{const sm=$('sidemenu'),sb=$('sideback');sm?.classList.remove('show');sb?.classList.remove('show');sm?.style.setProperty('display','none','important');sb?.style.setProperty('display','none','important');const m=$('authModal');if(m){m.classList.add('show');m.style.display='flex';m.style.pointerEvents='auto';m.setAttribute('aria-hidden','false')}chooseRole('CUSTOMER');gateSetStatus('Create your account with Name, mobile number, Gmail OTP and password.',true)}catch(err){console.error('Create Account error',err);const s=$('loginGateStatus');if(s)s.textContent='Please try again. App error: '+(err?.message||'unknown')}};
 async function syncCurrentUserToSupabase(){
  const u=currentUser();if(!u||!supabaseReady||!supabase)return;
  try{
@@ -272,7 +273,6 @@ function render(){
  const sm=$('sidemenu'), sb=$('sideback');
  if(!logged){
    closeSide();
-   closeModal('authModal');
    sm?.style.setProperty('display','none','important');
    sb?.style.setProperty('display','none','important');
  }else{
@@ -511,6 +511,7 @@ $('roleDriverBtn')?.addEventListener('click',e=>{e.preventDefault();e.stopPropag
 authModal?.addEventListener('click',e=>{if(e.target===authModal)closeModal('authModal')},true);
 
 $('createAccountBtn')?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();window.__openCreateAccount(e)},{capture:true});
+$('createAccountBtn')?.addEventListener('touchend',e=>{e.preventDefault();e.stopPropagation();window.__openCreateAccount(e)},{capture:true,passive:false});
 $('menuBtn')?.addEventListener('click',openSide);
 $('sideClose')?.addEventListener('click',closeSide);
 $('sideback')?.addEventListener('click',closeSide);
