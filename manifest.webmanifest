@@ -1,9 +1,13 @@
 {
-  "name":"Assam Drive",
+  "name":"Assam Drive — Your Ride • Our Assam",
   "short_name":"Assam Drive",
   "start_url":"./",
+  "scope":"./",
   "display":"standalone",
-  "background_color":"#f4f7f6",
-  "theme_color":"#0b7a53",
-  "description":"Assam ride-booking application foundation"
+  "background_color":"#070707",
+  "theme_color":"#087a52",
+  "description":"Assam Drive — Bike, Auto and Car ride booking for Assam.",
+  "icons":[
+    {"src":"./assets/assam-ride-logo.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}
+  ]
 }
