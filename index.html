@@ -432,8 +432,8 @@ async function sendSignupEmailOtp(role){
  const phone=normalizePhone($('signupPhone')?.value||'');
  const email=($('signupEmail')?.value||'').trim().toLowerCase();
  if(name.length<2){toast('Enter your full name');return}
- if(!/^\\+91\\d{10}$/.test(phone)){toast('Enter a valid 10-digit Indian mobile number');return}
- if(!/^\\S+@\\S+\\.\\S+$/.test(email)){toast('Enter a valid Gmail/email address');return}
+ if(!/^\+91\d{10}$/.test(phone)){toast('Enter a valid 10-digit Indian mobile number');return}
+ if(!/^\S+@\S+\.\S+$/.test(email)){toast('Enter a valid Gmail/email address');return}
  setAuthFlow((role==='DRIVER'?'Driver':'Customer')+' • Verify Gmail','Enter the OTP sent to '+email+'.');
  $('authForm').innerHTML='<div class="stack"><div class="success">OTP sent to '+esc(email)+' ✓</div><div class="field"><label>Gmail OTP</label><input id="signupEmailOtp" maxlength="6" inputmode="numeric" autocomplete="one-time-code" class="login-password" placeholder="Enter 6-digit OTP"></div><button class="primary" type="button" onclick="verifySignupEmailOtp(\''+role+'\',\''+encodeURIComponent(name)+'\',\''+encodeURIComponent(phone)+'\',\''+encodeURIComponent(email)+'\')">Verify Gmail & Continue</button><button class="ghost" type="button" onclick="startAccountSignup(\''+role+'\')">← Back</button></div>';
  const {error}=await supabase.auth.signInWithOtp({email,options:{data:{requested_role:role,full_name:name,mobile_number:phone}}});
@@ -441,7 +441,7 @@ async function sendSignupEmailOtp(role){
 }
 async function verifySignupEmailOtp(role,en,ep,ee){
  const name=decodeURIComponent(en),phone=decodeURIComponent(ep),email=decodeURIComponent(ee);
- const token=($('signupEmailOtp')?.value||'').replace(/\\D/g,'');
+ const token=($('signupEmailOtp')?.value||'').replace(/\D/g,'');
  if(token.length<4){toast('Enter the verification code');return}
  const {data,error}=await supabase.auth.verifyOtp({email,token,type:'email'});
  if(error){toast(error.message);return}
@@ -453,7 +453,7 @@ async function startEmailSignup(role){startAccountSignup(role)}
 async function sendEmailOtp(role){startAccountSignup(role)}
 async function verifyEmailSignup(role,ee){
  const email=decodeURIComponent(ee);
- const token=($('authEmailOtp')?.value||'').replace(/\\D/g,'');
+ const token=($('authEmailOtp')?.value||'').replace(/\D/g,'');
  if(token.length<4){toast('Enter the verification code');return}
  const {data,error}=await supabase.auth.verifyOtp({email,token,type:'email'});
  if(error){toast(error.message);return}
@@ -491,7 +491,7 @@ function openForgotPassword(){
 async function sendPasswordReset(){
   if(!supabaseReady||!supabase){toast('Login service is unavailable.');return}
   const email=($('recoveryEmail')?.value||'').trim().toLowerCase();
-  if(!/^\\S+@\\S+\\.\\S+$/.test(email)){toast('Enter a valid Gmail/email address');return}
+  if(!/^\S+@\S+\.\S+$/.test(email)){toast('Enter a valid Gmail/email address');return}
   passwordRecoveryOtpPending=true;
   authFlowStage='RECOVERY';
   localStorage.setItem('assam_drive_password_recovery','1');
@@ -503,8 +503,8 @@ async function sendPasswordReset(){
 async function verifyPasswordResetOtp(){
   if(!supabaseReady||!supabase){toast('Login service is unavailable.');return}
   const email=($('recoveryEmail')?.value||'').trim().toLowerCase();
-  const token=($('recoveryOtp')?.value||'').replace(/\\D/g,'');
-  if(!/^\\S+@\\S+\\.\\S+$/.test(email)){toast('Enter a valid Gmail/email address');return}
+  const token=($('recoveryOtp')?.value||'').replace(/\D/g,'');
+  if(!/^\S+@\S+\.\S+$/.test(email)){toast('Enter a valid Gmail/email address');return}
   if(token.length<4){toast('Enter the OTP from Gmail');return}
   passwordRecoveryOtpPending=true;localStorage.setItem('assam_drive_password_recovery','1');
   const {data,error}=await supabase.auth.verifyOtp({email,token,type:'email'});
