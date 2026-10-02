@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b7a53">
+<link rel="manifest" href="./manifest.webmanifest">
+<title>Assam Drive</title>
+<style>
+:root{--g:#0b7a53;--g2:#12a66d;--bg:#f4f7f6;--card:#fff;--text:#17211d;--muted:#66736d;--line:#dce6e1;--danger:#c62828;--warn:#b77900;--shadow:0 8px 28px #12331d12}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+button,input,select{font:inherit}button{border:0;cursor:pointer}.app{min-height:100vh;max-width:1100px;margin:auto}
+header{position:sticky;top:0;z-index:5;background:#ffffffec;backdrop-filter:blur(12px);border-bottom:1px solid var(--line);padding:12px 16px;display:flex;gap:12px;align-items:center;justify-content:space-between}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800}.logo{width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,var(--g),var(--g2));display:grid;place-items:center;color:#fff;font-size:20px}
+nav{display:flex;gap:6px;flex-wrap:wrap}.navbtn,.primary,.secondary,.danger{padding:10px 13px;border-radius:11px;font-weight:700}.navbtn{background:#eef3f0;color:#30413a}.navbtn.active,.primary{background:var(--g);color:#fff}.secondary{background:#e8f3ee;color:var(--g)}.danger{background:#fdeaea;color:var(--danger)}
+main{padding:18px}.view{display:none}.view.active{display:block}.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:var(--shadow)}.span8{grid-column:span 8}.span4{grid-column:span 4}.span6{grid-column:span 6}.span12{grid-column:span 12}
+h1,h2,h3{margin:0 0 8px}h1{font-size:28px}h2{font-size:20px}h3{font-size:16px}.muted{color:var(--muted)}.small{font-size:12px}.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.between{justify-content:space-between}.stack{display:grid;gap:10px}.field label{display:block;font-weight:700;margin-bottom:5px}.field input,.field select{width:100%;padding:12px;border:1px solid var(--line);border-radius:11px;background:#fff;outline:none}.field input:focus,.field select:focus{border-color:var(--g)}
+.vehicle{display:flex;gap:10px}.vehicle label{flex:1}.vehicle input{display:none}.vehicle span{display:block;padding:12px;text-align:center;border:1px solid var(--line);border-radius:12px;font-weight:700}.vehicle input:checked+span{border-color:var(--g);background:#e9f7f1;color:var(--g)}
+.map{height:320px;border-radius:16px;overflow:hidden;background:#dfeee7;position:relative;border:1px solid var(--line)}
+.map svg{width:100%;height:100%}.marker{position:absolute;width:18px;height:18px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 8px #0004}.pickup{background:#1687ff}.dest{background:#e64b4b}.driver{background:#0b7a53}.m1{left:27%;top:62%}.m2{left:71%;top:28%}.m3{left:53%;top:47%}
+.stat{padding:14px;border-radius:14px;background:#f6faf8;border:1px solid var(--line)}.stat b{display:block;font-size:22px}.pill{padding:5px 9px;border-radius:99px;font-size:12px;font-weight:800;background:#eef3f0}.ok{background:#e8f7ef;color:#087548}.warn{background:#fff5db;color:#9a6700}.bad{background:#fdeaea;color:#a61e1e}
+.ride{border:1px solid var(--line);border-radius:14px;padding:13px}.ride+.ride{margin-top:9px}.ride-title{display:flex;justify-content:space-between;gap:8px}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#17211d;color:#fff;padding:12px 16px;border-radius:12px;display:none;z-index:20;box-shadow:var(--shadow)}
+.hero{background:linear-gradient(135deg,#0b7a53,#126e58);color:#fff;border-radius:22px;padding:22px}.hero p{color:#d9f4e9}.notice{padding:11px 13px;border-radius:12px;background:#fff8df;color:#795b00;border:1px solid #f0dda0}
+@media(max-width:760px){main{padding:12px}.span8,.span4,.span6{grid-column:span 12}header{align-items:flex-start;flex-direction:column}nav{width:100%}.navbtn{flex:1}.map{height:260px}.vehicle span{padding:10px 4px;font-size:13px}}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+<div class="brand"><div class="logo">🚗</div><div>Assam Drive<div class="small muted">Ride booking • Assam</div></div></div>
+<nav>
+<button class="navbtn active" data-view="customer">Customer</button>
+<button class="navbtn" data-view="driver">Driver</button>
+<button class="navbtn" data-view="admin">Admin</button>
+<button class="navbtn" id="resetBtn">Reset</button>
+</nav>
+</header>
+<main>
+<section id="customer" class="view active">
+<div class="hero"><h1>Book a ride in Assam</h1><p>Choose your vehicle, set pickup and destination, then request a nearby verified driver.</p></div>
+<div class="grid" style="margin-top:14px">
+<div class="card span8 stack">
+<h2>New ride</h2>
+<div class="field"><label>Pickup</label><input id="pickup" value="Paltan Bazaar, Guwahati"></div>
+<div class="field"><label>Destination</label><input id="destination" value="Six Mile, Guwahati"></div>
+<div class="vehicle">
+<label><input type="radio" name="vehicle" value="BIKE" checked><span>🏍️ Bike<br><b>₹20 + ₹10/km</b></span></label>
+<label><input type="radio" name="vehicle" value="AUTO"><span>🛺 Auto<br><b>₹30 + ₹14/km</b></span></label>
+<label><input type="radio" name="vehicle" value="CAR"><span>🚗 Car<br><b>₹50 + ₹18/km</b></span></label>
+</div>
+<div class="map" id="customerMap">
+<svg viewBox="0 0 100 100" preserveAspectRatio="none"><path d="M0 72 C20 55,22 78,38 54 S62 25,100 35" fill="none" stroke="#b6d5c7" stroke-width="8"/><path d="M0 20 C25 45,38 15,55 40 S78 78,100 60" fill="none" stroke="#c9dfd5" stroke-width="5"/><path d="M12 90 L90 8 M8 25 L92 82" stroke="#d3e5de" stroke-width="2"/></svg>
+<div class="marker pickup m1"></div><div class="marker dest m2"></div><div class="marker driver m3"></div>
+</div>
+<div class="row between"><span class="muted" id="routeText">Estimated distance: 7.2 km • 18 min</span><b id="fare">₹92</b></div>
+<div class="row"><button class="primary" id="bookBtn">Request ride</button><button class="secondary" id="locBtn">Use current location</button></div>
+</div>
+<div class="card span4 stack">
+<h2>Current ride</h2><div id="currentRide"><div class="muted">No active ride.</div></div>
+<div class="notice small">Safety: SOS is available during an active ride. Location sharing ends when the ride ends.</div>
+</div>
+<div class="card span12"><h2>Ride history</h2><div id="history"></div></div>
+</div>
+</section>
+
+<section id="driver" class="view">
+<div class="grid">
+<div class="card span8 stack">
+<div class="row between"><div><h1>Driver</h1><div class="muted">Only verified drivers can go online.</div></div><button class="primary" id="onlineBtn">Go online</button></div>
+<div class="grid">
+<div class="stat span4"><span class="muted">Verification</span><b id="driverVerify">Verified</b></div>
+<div class="stat span4"><span class="muted">Today</span><b id="driverEarn">₹0</b></div>
+<div class="stat span4"><span class="muted">Status</span><b id="driverStatus">Offline</b></div>
+</div>
+<div id="driverRequest"><div class="muted">No ride request.</div></div>
+<div id="driverRide"></div>
+</div>
+<div class="card span4 stack"><h2>Driver profile</h2>
+<div class="field"><label>Name</label><input id="driverName" value="Demo Driver"></div>
+<div class="field"><label>Vehicle</label><select id="driverVehicle"><option>BIKE</option><option>AUTO</option><option>CAR</option></select></div>
+<div class="field"><label>Registration</label><input value="AS-01-AB-1234"></div>
+<div class="notice small">Production verification must be completed by admin using submitted documents. Demo data is not proof of licence/vehicle authenticity.</div>
+</div>
+</div>
+</section>
+
+<section id="admin" class="view">
+<div class="grid">
+<div class="card span12"><h1>Admin Dashboard</h1><div class="muted">Operations, driver verification and ride monitoring.</div></div>
+<div class="stat span4"><span class="muted">Active rides</span><b id="adminActive">0</b></div>
+<div class="stat span4"><span class="muted">Online drivers</span><b id="adminOnline">0</b></div>
+<div class="stat span4"><span class="muted">Completed rides</span><b id="adminDone">0</b></div>
+<div class="card span8"><h2>Live rides</h2><div id="adminRides"></div></div>
+<div class="card span4"><h2>Fare settings</h2><div class="stack">
+<div class="field"><label>Bike / km</label><input id="bikeRate" type="number" value="10"></div>
+<div class="field"><label>Auto / km</label><input id="autoRate" type="number" value="14"></div>
+<div class="field"><label>Car / km</label><input id="carRate" type="number" value="18"></div>
+<button class="primary" id="saveFare">Save fare settings</button></div></div>
+<div class="card span12"><h2>Verification queue</h2><div class="ride"><div class="ride-title"><b>Demo Driver • AS-01-AB-1234</b><span class="pill ok">Verified</span></div><div class="small muted">Licence • RC • Insurance • PUC • Vehicle photo</div></div></div>
+</div>
+</section>
+</main>
+<div class="toast" id="toast"></div>
+</div>
+<script>
+const KEY='assam-drive-demo-v1';
+const defaults={drivers:[{id:'d1',name:'Demo Driver',vehicle:'BIKE',verified:true,online:false,earn:0}],rides:[],fare:{BIKE:{base:20,km:10,min:1},AUTO:{base:30,km:14,min:1},CAR:{base:50,km:18,min:2}},seq:1001};
+let state=JSON.parse(localStorage.getItem(KEY)||'null')||defaults;
+const $=id=>document.getElementById(id);
+function save(){localStorage.setItem(KEY,JSON.stringify(state));render()}
+function toast(x){const t=$('toast');t.textContent=x;t.style.display='block';clearTimeout(window.__toast);window.__toast=setTimeout(()=>t.style.display='none',2200)}
+function vehicle(){return document.querySelector('input[name=vehicle]:checked').value}
+function activeRide(){return state.rides.find(r=>['SEARCHING','DRIVER_ASSIGNED','OTP_PENDING','RIDE_STARTED'].includes(r.status))}
+function estimate(){const v=vehicle(), km=7.2, mins=18, f=state.fare[v];return Math.max(f.base+km*f.km+mins*f.min, v==='BIKE'?40:v==='AUTO'?60:100)}
+function renderFare(){$('fare').textContent='₹'+Math.round(estimate());$('routeText').textContent='Estimated distance: 7.2 km • 18 min'}
+function render(){
+ renderFare();
+ const ar=activeRide();
+ $('currentRide').innerHTML=ar?rideCustomer(ar):'<div class="muted">No active ride.</div>';
+ $('history').innerHTML=state.rides.filter(r=>!['SEARCHING','DRIVER_ASSIGNED','OTP_PENDING','RIDE_STARTED'].includes(r.status)).slice().reverse().map(r=>'<div class="ride"><div class="ride-title"><b>'+r.vehicle+' • '+r.pickup+' → '+r.destination+'</b><span class="pill '+(r.status==='COMPLETED'?'ok':'bad')+'">'+r.status+'</span></div><div class="small muted">₹'+r.fare+' • '+new Date(r.created).toLocaleString()+'</div></div>').join('')||'<div class="muted">No rides yet.</div>';
+ const d=state.drivers[0];$('driverStatus').textContent=d.online?'Online':'Offline';$('onlineBtn').textContent=d.online?'Go offline':'Go online';$('driverEarn').textContent='₹'+d.earn;
+ const req=state.rides.find(r=>r.status==='SEARCHING');
+ $('driverRequest').innerHTML=req&&d.online?rideRequest(req):'<div class="muted">'+(d.online?'Waiting for ride requests…':'Go online to receive nearby ride requests.')+'</div>';
+ const dr=state.rides.find(r=>r.driverId==='d1'&&['DRIVER_ASSIGNED','OTP_PENDING','RIDE_STARTED'].includes(r.status));
+ $('driverRide').innerHTML=dr?rideDriver(dr):'';
+ $('adminActive').textContent=state.rides.filter(r=>['SEARCHING','DRIVER_ASSIGNED','OTP_PENDING','RIDE_STARTED'].includes(r.status)).length;
+ $('adminOnline').textContent=state.drivers.filter(d=>d.online&&d.verified).length;
+ $('adminDone').textContent=state.rides.filter(r=>r.status==='COMPLETED').length;
+ $('adminRides').innerHTML=state.rides.slice().reverse().map(r=>'<div class="ride"><div class="ride-title"><b>#'+r.id+' '+r.vehicle+'</b><span class="pill">'+r.status+'</span></div><div class="small">'+r.pickup+' → '+r.destination+' • ₹'+r.fare+'</div></div>').join('')||'<div class="muted">No rides.</div>';
+}
+function rideCustomer(r){
+ let html='<div class="stack"><div><span class="pill '+(r.status==='RIDE_STARTED'?'ok':'warn')+'">'+r.status+'</span></div><b>'+r.vehicle+' • '+r.driverName+'</b><span class="muted">'+r.pickup+' → '+r.destination+'</span>';
+ if(r.status==='OTP_PENDING') html+='<div class="notice">Tell the driver this 4-digit ride OTP: <b style="font-size:22px">'+r.otp+'</b></div>';
+ if(r.status==='RIDE_STARTED') html+='<div class="notice">Ride is active. Driver location sharing is active until completion.</div><button class="danger" onclick="sos()">SOS</button><button class="primary" onclick="completeRide()">Complete ride</button>';
+ if(r.status==='DRIVER_ASSIGNED') html+='<div class="muted">Driver assigned. Arriving at pickup…</div>';
+ return html+'</div>';
+}
+function rideRequest(r){return '<div class="ride"><div class="ride-title"><b>New ride #'+r.id+'</b><span class="pill warn">'+r.vehicle+'</span></div><div>'+r.pickup+' → '+r.destination+'</div><div class="small muted">Estimated ₹'+r.fare+' • 7.2 km</div><div class="row" style="margin-top:9px"><button class="primary" onclick="acceptRide()">Accept</button><button class="danger" onclick="rejectRide()">Reject</button></div></div>'}
+function rideDriver(r){return '<div class="ride" style="margin-top:12px"><b>Ride #'+r.id+'</b><div class="small">'+r.pickup+' → '+r.destination+'</div><div style="margin-top:8px"><b>OTP verification</b><div class="row"><input id="otpInput" maxlength="4" inputmode="numeric" placeholder="4-digit OTP" style="padding:10px;border:1px solid var(--line);border-radius:10px;width:150px"><button class="primary" onclick="verifyOtp()">Verify</button></div><div class="small muted">Maximum 2 attempts. Second wrong attempt cancels the ride.</div></div></div>'}
+function book(){
+ if(activeRide()){toast('Finish the current ride first');return}
+ const d=state.drivers.find(x=>x.online&&x.verified&&x.vehicle===vehicle());
+ if(!d){toast('No verified '+vehicle().toLowerCase()+' driver is online');return}
+ const r={id:state.seq++,vehicle:vehicle(),pickup:$('pickup').value.trim(),destination:$('destination').value.trim(),fare:Math.round(estimate()),status:'SEARCHING',driverId:null,driverName:null,otp:null,otpAttempts:0,created:Date.now()};
+ state.rides.push(r);save();toast('Ride request sent');
+ setTimeout(()=>{if(r.status==='SEARCHING'){r.status='DRIVER_ASSIGNED';r.driverId=d.id;r.driverName=d.name;r.status='OTP_PENDING';r.otp=String(Math.floor(1000+Math.random()*9000));save();toast('Driver assigned')}} ,700);
+}
+function acceptRide(){const r=state.rides.find(x=>x.status==='SEARCHING');if(!r)return;r.driverId='d1';r.driverName=state.drivers[0].name;r.status='OTP_PENDING';r.otp=String(Math.floor(1000+Math.random()*9000));save();toast('Ride accepted')}
+function rejectRide(){const r=state.rides.find(x=>x.status==='SEARCHING');if(!r)return;r.status='CANCELLED';r.cancelReason='Driver rejected';save();toast('Ride rejected')}
+function verifyOtp(){const r=state.rides.find(x=>x.driverId==='d1'&&x.status==='OTP_PENDING');if(!r)return;const val=($('otpInput').value||'').replace(/\D/g,'');if(val===r.otp){r.status='RIDE_STARTED';r.otp=null;save();toast('OTP verified — ride started')}else{r.otpAttempts++;if(r.otpAttempts>=2){r.status='CANCELLED';r.otp=null;save();toast('Ride cancelled after 2 wrong OTP attempts')}else{save();toast('Wrong OTP — 1 attempt remaining')}}}
+function completeRide(){const r=activeRide();if(!r||r.status!=='RIDE_STARTED')return;r.status='COMPLETED';const d=state.drivers.find(x=>x.id===r.driverId);if(d)d.earn+=r.fare;save();toast('Ride completed')}
+function sos(){toast('SOS event logged for this demo ride. Connect emergency services before production launch.')}
+$('bookBtn').onclick=book;$('onlineBtn').onclick=()=>{const d=state.drivers[0];if(!d.verified){toast('Driver is not verified');return}d.online=!d.online;save();toast(d.online?'Driver is online':'Driver is offline')};
+$('locBtn').onclick=()=>{if(!navigator.geolocation){toast('Location is not supported');return}navigator.geolocation.getCurrentPosition(p=>toast('Location received: '+p.coords.latitude.toFixed(4)+', '+p.coords.longitude.toFixed(4)),()=>toast('Location permission was not granted'))};
+['pickup','destination'].forEach(id=>$(id).oninput=renderFare);document.querySelectorAll('input[name=vehicle]').forEach(x=>x.onchange=renderFare);
+$('saveFare').onclick=()=>{state.fare.BIKE.km=+$('bikeRate').value||10;state.fare.AUTO.km=+$('autoRate').value||14;state.fare.CAR.km=+$('carRate').value||18;save();toast('Fare settings saved')};
+$('resetBtn').onclick=()=>{if(confirm('Reset only Assam Drive demo data?')){localStorage.removeItem(KEY);state=JSON.parse(JSON.stringify(defaults));render();toast('Demo data reset')}};
+document.querySelectorAll('.navbtn[data-view]').forEach(b=>b.onclick=()=>{document.querySelectorAll('.navbtn').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));$(b.dataset.view).classList.add('active')});
+render();
+if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(()=>{});
+</script>
+</body>
+</html>
