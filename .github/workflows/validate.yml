@@ -1,0 +1,30 @@
+name: Assam Drive validation
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Validate inline JavaScript
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          s=Path("index.html").read_text(encoding="utf-8")
+          blocks=re.findall(r"<script(?:\s[^>]*)?>(.*?)</script>",s,re.S|re.I)
+          Path("/tmp/assam-drive-inline.js").write_text("\n".join(blocks),encoding="utf-8")
+          print("script blocks:",len(blocks))
+          PY
+          node --check /tmp/assam-drive-inline.js
+      - name: Validate SQL files are present
+        run: |
+          test -f supabase/migrations/001_assam_drive_core.sql
+          test -f supabase/migrations/002_production_driver_document_verification.sql
+          test -f supabase/migrations/003_production_ride_backend.sql
