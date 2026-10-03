@@ -1,4 +1,12 @@
 -- Assam Drive: secure account identity/role boundary
+-- Keep this migration self-contained if an older identity migration was not
+-- applied yet.
+alter table public.profiles add column if not exists email text;
+
+create unique index if not exists profiles_customer_email_unique_secure
+on public.profiles (lower(email))
+where role='CUSTOMER' and email is not null and email <> '';
+
 -- The dashboard role must come from public.profiles, never from a login
 -- button or client-controlled requested_role value.
 
