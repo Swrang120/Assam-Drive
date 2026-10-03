@@ -637,7 +637,23 @@ async function loginWithPassword(role,mode){
  const payload=mode==='EMAIL'?{email:identifier,password}:{phone:identifier,password};
  const {data,error}=await supabase.auth.signInWithPassword(payload);
  if(error){toast(error.message);return}
- await establishSupabaseUser(role,data.user);closeModal('authModal');save();toast(role==='CUSTOMER'?'Customer login successful':'Driver login successful');
+ if(!data?.user){toast('Login session was not created. Please try again.');return}
+
+ // Detect the real account type from the backend profile.
+ const account=await supabase.rpc('get_my_account_role');
+ if(account.error){await supabase.auth.signOut();toast(account.error.message);return}
+ const actualRole=account.data?.role;
+ if(actualRole!=='CUSTOMER'&&actualRole!=='DRIVER'){
+   await supabase.auth.signOut();
+   toast('Account role could not be verified.');
+   return;
+ }
+
+ await establishSupabaseUser(actualRole,data.user);
+ localStorage.setItem('assam_drive_pending_role',actualRole);
+ closeModal('authModal');
+ save();
+ toast(actualRole==='CUSTOMER'?'Customer login successful':'Driver login successful');
 }
 async function sendOtp(role){
  if(!supabaseReady||!supabase){toast('Login service is still loading.');return}
