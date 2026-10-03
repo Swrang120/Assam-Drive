@@ -496,14 +496,16 @@ async function sendSignupEmailOtp(role){
  if(name.length<2){toast('Enter your full name');return}
  if(!/^\+91\d{10}$/.test(phone)){toast('Enter a valid 10-digit Indian mobile number');return}
  if(!/^\S+@\S+\.\S+$/.test(email)){toast('Enter a valid Gmail/email address');return}
- if(role==='CUSTOMER'){
-   const check=await supabase.rpc('check_customer_signup',{p_email:email,p_phone:phone});
-   if(check.error){toast(check.error.message);return}
-   if(!check.data?.allowed){
-     const reason=check.data?.reason;
-     toast(reason==='EMAIL_EXISTS'?'This Gmail is already registered. Please login.':reason==='PHONE_EXISTS'?'This mobile number is already registered. Please login.':'This customer information is already registered. Please login.');
-     return;
-   }
+ const check=await supabase.rpc('check_account_signup',{p_email:email,p_phone:phone,p_role:role});
+ if(check.error){toast(check.error.message);return}
+ if(!check.data?.allowed){
+   const reason=check.data?.reason;
+   toast(reason==='EMAIL_EXISTS'
+     ? 'This Gmail is already registered. Please login. The same Gmail cannot be used for another account type.'
+     : reason==='PHONE_EXISTS'
+       ? 'This mobile number is already registered. Please login. It cannot be used for another account.'
+       : 'This account information is already registered. Please login.');
+   return;
  }
  setAuthFlow((role==='DRIVER'?'Driver':'Customer')+' • Verify Gmail','Enter the OTP sent to '+email+'.');
  $('authForm').innerHTML='<div class="stack"><div class="success">OTP sent to '+esc(email)+' ✓</div><div class="field"><label>Gmail OTP</label><input id="signupEmailOtp" maxlength="6" inputmode="numeric" autocomplete="one-time-code" class="login-password" placeholder="Enter 6-digit OTP"></div><button class="primary" type="button" onclick="verifySignupEmailOtp(\''+role+'\',\''+encodeURIComponent(name)+'\',\''+encodeURIComponent(phone)+'\',\''+encodeURIComponent(email)+'\')">Verify Gmail & Continue</button><button class="ghost" type="button" onclick="startAccountSignup(\''+role+'\')">← Back</button></div>';
