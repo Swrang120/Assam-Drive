@@ -495,6 +495,15 @@ async function sendSignupEmailOtp(role){
  if(name.length<2){toast('Enter your full name');return}
  if(!/^\+91\d{10}$/.test(phone)){toast('Enter a valid 10-digit Indian mobile number');return}
  if(!/^\S+@\S+\.\S+$/.test(email)){toast('Enter a valid Gmail/email address');return}
+ if(role==='CUSTOMER'){
+   const check=await supabase.rpc('check_customer_signup',{p_email:email,p_phone:phone});
+   if(check.error){toast(check.error.message);return}
+   if(!check.data?.allowed){
+     const reason=check.data?.reason;
+     toast(reason==='EMAIL_EXISTS'?'This Gmail is already registered. Please login.':reason==='PHONE_EXISTS'?'This mobile number is already registered. Please login.':'This customer information is already registered. Please login.');
+     return;
+   }
+ }
  setAuthFlow((role==='DRIVER'?'Driver':'Customer')+' • Verify Gmail','Enter the OTP sent to '+email+'.');
  $('authForm').innerHTML='<div class="stack"><div class="success">OTP sent to '+esc(email)+' ✓</div><div class="field"><label>Gmail OTP</label><input id="signupEmailOtp" maxlength="6" inputmode="numeric" autocomplete="one-time-code" class="login-password" placeholder="Enter 6-digit OTP"></div><button class="primary" type="button" onclick="verifySignupEmailOtp(\''+role+'\',\''+encodeURIComponent(name)+'\',\''+encodeURIComponent(phone)+'\',\''+encodeURIComponent(email)+'\')">Verify Gmail & Continue</button><button class="ghost" type="button" onclick="startAccountSignup(\''+role+'\')">← Back</button></div>';
  const {error}=await supabase.auth.signInWithOtp({email,options:{data:{requested_role:role,full_name:name,mobile_number:phone}}});
@@ -533,8 +542,19 @@ async function setAccountPassword(role,mode,ei,en='',ep=''){
  if(p.length<8){toast('Password must be at least 8 characters');return}
  if(p!==q){toast('Passwords do not match');return}
  const name=decodeURIComponent(en),phone=decodeURIComponent(ep);
- const {error}=await supabase.auth.updateUser({password:p,data:{full_name:name,mobile_number:phone,requested_role:role}});
+ const {data,error}=await supabase.auth.updateUser({password:p,data:{full_name:name,mobile_number:phone,requested_role:role}});
  if(error){toast(error.message);return}
+ if(!data?.user){toast('Account session was not created. Please try again.');return}
+ if(role==='CUSTOMER'){
+   const profile=await supabase.rpc('ensure_my_profile',{p_role:'CUSTOMER',p_name:name,p_phone:phone});
+   if(profile.error){toast(profile.error.message);return}
+   authFlowStage='IDLE';
+   await establishSupabaseUser('CUSTOMER',data.user,{name,phone});
+   closeModal('authModal');
+   save();
+   toast('Customer account created successfully');
+   return;
+ }
  authFlowStage='IDLE';
  await supabase.auth.signOut();
  state.session=null;save();
