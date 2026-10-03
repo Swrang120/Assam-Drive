@@ -110,6 +110,47 @@ create trigger prevent_duplicate_account_identity_auth_user
 before insert or update of raw_user_meta_data on auth.users
 for each row execute function public.prevent_duplicate_account_identity();
 
+-- Create the application profile in the same Auth transaction. This makes
+-- the mobile unique index effective at account creation time, not only later
+-- when the client calls ensure_my_profile.
+create or replace function public.create_assam_drive_profile_for_auth_user()
+returns trigger
+language plpgsql
+security definer
+set search_path=public
+as $
+declare
+  requested_role text := upper(coalesce(new.raw_user_meta_data->>'requested_role',''));
+  clean_phone text := public.normalize_mobile(coalesce(new.raw_user_meta_data->>'mobile_number',''));
+  clean_name text := coalesce(new.raw_user_meta_data->>'full_name','');
+begin
+  if requested_role not in ('CUSTOMER','DRIVER') then
+    return new;
+  end if;
+
+  if clean_phone='' or length(clean_phone)<>10 then
+    raise exception 'A valid 10-digit mobile number is required for Assam Drive signup.'
+      using errcode='23514';
+  end if;
+
+  insert into public.profiles(id,role,full_name,phone,updated_at)
+  values(new.id,requested_role,clean_name,clean_phone,now());
+
+  if requested_role='DRIVER' then
+    insert into public.driver_profiles(id,vehicle_type,updated_at)
+    values(new.id,'BIKE',now())
+    on conflict(id) do nothing;
+  end if;
+
+  return new;
+end;
+$;
+
+drop trigger if exists create_assam_drive_profile_on_auth_user on auth.users;
+create trigger create_assam_drive_profile_on_auth_user
+after insert on auth.users
+for each row execute function public.create_assam_drive_profile_for_auth_user();
+
 -- Backend role/identity check used by both signup and login.
 create or replace function public.check_account_signup(
   p_email text,
