@@ -1,8 +1,9 @@
--- Assam Drive: backend identity uniqueness
--- Apply this migration to the SAME Supabase project used by the app.
--- Email uniqueness is enforced by Supabase Auth (auth.users.email).
--- Mobile uniqueness is enforced here at the database/trigger level so it
--- cannot be bypassed by the frontend.
+-- Assam Drive: customer identity uniqueness
+-- Email uniqueness is enforced by Supabase Auth (auth.users).
+-- Customer mobile uniqueness is enforced in PostgreSQL so the rule cannot
+-- be bypassed by the frontend.
+
+begin;
 
 create or replace function public.normalize_mobile(p_phone text)
 returns text
@@ -15,15 +16,35 @@ as $$
   end
 $$;
 
--- A mobile number must belong to only one account.
--- Empty phones are excluded so incomplete legacy rows do not collide.
-create unique index if not exists profiles_mobile_unique_idx
-on public.profiles (public.normalize_mobile(phone))
-where public.normalize_mobile(phone) <> '';
+-- Refuse migration if existing Customer rows already contain duplicate mobiles.
+do $$
+declare duplicate_count integer;
+begin
+  select count(*) into duplicate_count
+  from (
+    select public.normalize_mobile(phone) as phone_key
+    from public.profiles
+    where role='CUSTOMER'
+      and public.normalize_mobile(phone) <> ''
+    group by public.normalize_mobile(phone)
+    having count(*) > 1
+  ) duplicates;
 
--- Reject duplicate mobile numbers before an auth user can be created/updated.
--- The signup page stores the number in user metadata as mobile_number.
-create or replace function public.prevent_duplicate_mobile_auth_user()
+  if duplicate_count > 0 then
+    raise exception 'Duplicate customer mobile numbers already exist. Resolve them before enabling the unique customer-mobile rule.';
+  end if;
+end $$;
+
+-- One mobile number = one Customer account.
+-- Driver numbers are not included in this Customer-only rule yet.
+drop index if exists public.profiles_mobile_unique_idx;
+create unique index if not exists profiles_customer_mobile_unique_idx
+on public.profiles (public.normalize_mobile(phone))
+where role='CUSTOMER' and public.normalize_mobile(phone) <> '';
+
+-- Block a second Auth account when the signup metadata contains a mobile
+-- already owned by another Customer profile.
+create or replace function public.prevent_duplicate_customer_mobile()
 returns trigger
 language plpgsql
 security definer
@@ -32,40 +53,49 @@ as $$
 declare
   new_phone text;
   existing_id uuid;
+  requested_role text;
 begin
-  new_phone := public.normalize_mobile(coalesce(new.raw_user_meta_data->>'mobile_number',''));
+  requested_role := upper(coalesce(new.raw_user_meta_data->>'requested_role',''));
 
-  if new_phone = '' then
+  if requested_role <> 'CUSTOMER' then
     return new;
   end if;
 
-  select p.id
-    into existing_id
+  new_phone := public.normalize_mobile(coalesce(new.raw_user_meta_data->>'mobile_number',''));
+
+  if new_phone = '' then
+    raise exception 'Customer mobile number is required.'
+      using errcode='P0001';
+  end if;
+
+  if length(new_phone) <> 10 then
+    raise exception 'Customer mobile number must contain exactly 10 digits.'
+      using errcode='P0001';
+  end if;
+
+  select p.id into existing_id
   from public.profiles p
-  where public.normalize_mobile(p.phone) = new_phone
-    and p.id <> new.id
+  where p.role='CUSTOMER'
+    and public.normalize_mobile(p.phone)=new_phone
+    and p.id<>new.id
   limit 1;
 
   if existing_id is not null then
     raise exception 'This mobile number is already registered. Please log in instead.'
-      using errcode = '23505';
+      using errcode='23505';
   end if;
 
   return new;
 end;
 $$;
 
-drop trigger if exists prevent_duplicate_mobile_auth_user
-on auth.users;
-
+drop trigger if exists prevent_duplicate_mobile_auth_user on auth.users;
 create trigger prevent_duplicate_mobile_auth_user
-before insert or update of raw_user_meta_data
-on auth.users
-for each row
-execute function public.prevent_duplicate_mobile_auth_user();
+before insert or update of raw_user_meta_data on auth.users
+for each row execute function public.prevent_duplicate_customer_mobile();
 
--- Harden the profile RPC too. This covers clients that create/sync profiles
--- directly after authentication and keeps the rule enforced server-side.
+-- Harden profile creation/sync as well. The unique index remains the final
+-- race-safe database constraint.
 create or replace function public.ensure_my_profile(
   p_role text,
   p_name text,
@@ -90,22 +120,26 @@ begin
     raise exception 'Invalid role';
   end if;
 
-  if clean_phone <> '' then
-    select p.id
-      into existing_id
+  if p_role='CUSTOMER' then
+    if clean_phone='' or length(clean_phone)<>10 then
+      raise exception 'Customer mobile number must contain exactly 10 digits.';
+    end if;
+
+    select p.id into existing_id
     from public.profiles p
-    where public.normalize_mobile(p.phone) = clean_phone
-      and p.id <> uid
+    where p.role='CUSTOMER'
+      and public.normalize_mobile(p.phone)=clean_phone
+      and p.id<>uid
     limit 1;
 
     if existing_id is not null then
       raise exception 'This mobile number is already registered. Please log in instead.'
-        using errcode = '23505';
+        using errcode='23505';
     end if;
   end if;
 
   insert into profiles(id,role,full_name,phone,updated_at)
-  values(uid,p_role,coalesce(p_name,''),coalesce(p_phone,''),now())
+  values(uid,p_role,coalesce(p_name,''),clean_phone,now())
   on conflict(id) do update
     set role=excluded.role,
         full_name=excluded.full_name,
@@ -137,6 +171,7 @@ begin
 end;
 $$;
 
--- Do not expose the helper functions to anonymous callers.
 revoke all on function public.normalize_mobile(text) from public;
-revoke all on function public.prevent_duplicate_mobile_auth_user() from public;
+revoke all on function public.prevent_duplicate_customer_mobile() from public;
+
+commit;
