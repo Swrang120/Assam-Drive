@@ -1,5 +1,5 @@
 -- Assam Drive: hard customer identity lock
--- Enforces one customer identity per email + Indian mobile number at DB level.
+-- Enforces one customer identity per normalized Gmail + Indian mobile number.
 -- Safe to run after the core profiles migration.
 
 alter table public.profiles
@@ -12,8 +12,6 @@ where u.id = p.id
   and (p.email is null or trim(p.email) = '')
   and u.email is not null;
 
--- Canonical Indian mobile key:
--- +91XXXXXXXXXX, 91XXXXXXXXXX and XXXXXXXXXX resolve to the same 10 digits.
 alter table public.profiles
   add column if not exists customer_phone_key text
   generated always as (
@@ -38,7 +36,6 @@ create unique index if not exists profiles_customer_phone_hard_unique
   where role = 'CUSTOMER'
     and customer_phone_key is not null;
 
--- Backend pre-check used before sending a customer OTP.
 create or replace function public.check_customer_signup(
   p_email text,
   p_phone text
@@ -81,12 +78,28 @@ begin
     return jsonb_build_object('allowed',false,'reason','PHONE_EXISTS');
   end if;
 
-  -- Auth itself is the authoritative email identity store.
   if exists (
     select 1 from auth.users
     where lower(coalesce(email,''))=v_email
   ) then
     return jsonb_build_object('allowed',false,'reason','EMAIL_EXISTS');
+  end if;
+
+  -- Also catch an unfinished customer signup whose Auth row exists
+  -- but whose public profile has not been created yet.
+  if exists (
+    select 1 from auth.users
+    where coalesce(raw_user_meta_data ->> 'requested_role','')='CUSTOMER'
+      and length(regexp_replace(coalesce(raw_user_meta_data ->> 'mobile_number',''),'\D','','g')) in (10,12)
+      and (
+        case
+          when length(regexp_replace(coalesce(raw_user_meta_data ->> 'mobile_number',''),'\D','','g'))=12
+            then right(regexp_replace(coalesce(raw_user_meta_data ->> 'mobile_number',''),'\D','','g'),10)
+          else regexp_replace(coalesce(raw_user_meta_data ->> 'mobile_number',''),'\D','','g')
+        end
+      )=v_phone
+  ) then
+    return jsonb_build_object('allowed',false,'reason','PHONE_EXISTS');
   end if;
 
   return jsonb_build_object('allowed',true);
@@ -96,9 +109,6 @@ $$;
 revoke all on function public.check_customer_signup(text,text) from public;
 grant execute on function public.check_customer_signup(text,text) to anon, authenticated;
 
--- Final database-boundary profile creation/update.
--- Even if someone bypasses the website, these checks prevent a duplicate
--- customer email or mobile number from being stored.
 create or replace function public.ensure_my_profile(
   p_role text,
   p_name text,
@@ -197,3 +207,67 @@ $$;
 
 revoke all on function public.ensure_my_profile(text,text,text) from public;
 grant execute on function public.ensure_my_profile(text,text,text) to authenticated;
+
+-- Final Auth-layer defense. If a second customer Auth user is attempted
+-- with the same mobile number, reject it before the new auth row is committed.
+create or replace function public.prevent_duplicate_customer_mobile()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_raw text;
+  v_digits text;
+  v_phone text;
+begin
+  if coalesce(new.raw_user_meta_data ->> 'requested_role','') <> 'CUSTOMER' then
+    return new;
+  end if;
+
+  v_raw := coalesce(new.raw_user_meta_data ->> 'mobile_number','');
+  v_digits := regexp_replace(v_raw,'\D','','g');
+
+  if length(v_digits)=10 then
+    v_phone := v_digits;
+  elsif length(v_digits)=12 and left(v_digits,2)='91' then
+    v_phone := right(v_digits,10);
+  else
+    return new;
+  end if;
+
+  if exists (
+    select 1
+    from auth.users u
+    where u.id <> new.id
+      and coalesce(u.raw_user_meta_data ->> 'requested_role','')='CUSTOMER'
+      and (
+        case
+          when length(regexp_replace(coalesce(u.raw_user_meta_data ->> 'mobile_number',''),'\D','','g'))=12
+            then right(regexp_replace(coalesce(u.raw_user_meta_data ->> 'mobile_number',''),'\D','','g'),10)
+          else regexp_replace(coalesce(u.raw_user_meta_data ->> 'mobile_number',''),'\D','','g')
+        end
+      )=v_phone
+  ) then
+    raise exception 'This mobile number is already registered as a customer account';
+  end if;
+
+  if exists (
+    select 1 from public.profiles p
+    where p.id<>new.id
+      and p.role='CUSTOMER'
+      and p.customer_phone_key=v_phone
+  ) then
+    raise exception 'This mobile number is already registered as a customer account';
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists prevent_duplicate_customer_mobile on auth.users;
+create trigger prevent_duplicate_customer_mobile
+before insert or update of raw_user_meta_data on auth.users
+for each row execute procedure public.prevent_duplicate_customer_mobile();
+
+revoke all on function public.prevent_duplicate_customer_mobile() from public;
