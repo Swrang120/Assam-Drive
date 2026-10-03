@@ -1,1 +1,78 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#087a52"><title>Login • Assam Drive</title><link rel="icon" href="../assets/assam-drive-logo.jpg"><style>body{margin:0;background:#07120e;color:#fff;font:15px system-ui,-apple-system,Segoe UI,Roboto,sans-serif;min-height:100vh;display:grid;place-items:center;padding:20px;box-sizing:border-box}.box{width:min(440px,100%);background:#fff;color:#17211d;border-radius:24px;padding:22px;box-shadow:0 20px 60px #0008}.logo{display:block;width:82px;height:82px;object-fit:contain;border-radius:22px;margin:0 auto 12px}.brand{text-align:center;font-size:27px;font-weight:900;color:#087a52}.sub{text-align:center;color:#66736d;margin:5px 0 20px}.roles{display:grid;gap:10px}.roles button,.primary,.ghost{width:100%;min-height:54px;border-radius:14px;border:0;font-weight:800;font-size:15px;cursor:pointer}.roles button{background:#edf7f2;color:#087a52;border:1px solid #bfe3d3}.primary{background:#087a52;color:#fff}.ghost{background:#f4f7f5;color:#087a52;border:1px solid #dce6e1}.form{display:grid;gap:11px}.form input{width:100%;padding:13px;border:1px solid #dce6e1;border-radius:12px;box-sizing:border-box;font:inherit}.status{min-height:20px;color:#b3261e;font-size:13px}.back{text-align:center;margin-top:14px}.back a{color:#087a52;text-decoration:none;font-weight:800}.hidden{display:none}.title{font-size:21px;font-weight:900}.muted{color:#66736d;font-size:13px}.role-title{margin-bottom:10px;font-size:18px;font-weight:900}</style></head><body><main class="box"><img class="logo" src="../assets/assam-drive-logo.jpg" alt="Assam Drive"><div class="brand">Assam Drive</div><div class="sub">YOUR RIDE • OUR ASSAM</div><section id="role"><div class="role-title">Login as</div><div class="roles"><button data-role="CUSTOMER">👤 Customer</button><button data-role="DRIVER">🚗 Driver</button></div></section><section id="form" class="hidden"><div class="title" id="heading">Customer Login</div><div class="muted">Use your Gmail/email and password.</div><div class="form" style="margin-top:14px"><input id="email" type="email" autocomplete="email" placeholder="Gmail / Email"><input id="password" type="password" autocomplete="current-password" placeholder="Password"><button class="primary" id="submit">🔐 Sign In</button><button class="ghost" id="change">← Change account type</button></div><div class="status" id="status"></div></section><div class="back"><a href="../index.html">← Back to Assam Drive</a> · <a href="./forgot-password.html">Forgot Password?</a></div></main><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="./login.js"></script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b0a08">
+<title>Login • Assam Drive</title>
+<link rel="icon" href="../assets/assam-drive-logo.jpg">
+<style>
+:root{--gold:#f7b718;--gold2:#ff8a00;--bg:#080806;--panel:#12110e;--panel2:#181610;--line:rgba(247,183,24,.25);--muted:#9d9a91;--text:#fffaf0}
+*{box-sizing:border-box}
+html,body{min-height:100%;margin:0}
+body{min-height:100vh;background:radial-gradient(circle at 50% 8%,#30210b 0,#120e07 28%,#080806 65%);color:var(--text);font:15px system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;display:grid;place-items:center;padding:24px;overflow-x:hidden}
+body:before{content:"";position:fixed;inset:0;pointer-events:none;background:linear-gradient(120deg,transparent 0 35%,rgba(255,191,40,.025) 50%,transparent 65%)}
+.box{position:relative;width:min(470px,100%);padding:34px 28px 26px;background:linear-gradient(145deg,rgba(29,27,21,.97),rgba(13,12,10,.98));border:1px solid var(--line);border-radius:30px;box-shadow:0 25px 80px rgba(0,0,0,.7),0 0 35px rgba(247,183,24,.08);overflow:hidden}
+.box:before{content:"";position:absolute;inset:0;border-radius:30px;padding:1px;background:linear-gradient(135deg,rgba(255,198,64,.5),transparent 35%,rgba(255,142,0,.22));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
+.logo-wrap{width:94px;height:94px;margin:0 auto 18px;padding:5px;border:2px solid var(--gold);border-radius:27px;background:#090806;box-shadow:0 0 25px rgba(247,183,24,.25)}
+.logo{display:block;width:100%;height:100%;object-fit:contain;border-radius:20px}
+.brand{text-align:center;font-size:30px;line-height:1;font-weight:950;letter-spacing:-.7px;background:linear-gradient(90deg,#fff4c9,var(--gold),#fff0b1);-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{text-align:center;color:#a8a398;font-size:12px;letter-spacing:2.3px;margin:9px 0 28px}
+.role-title{font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:1.5px;color:#c4bca9;margin:0 0 11px}
+.roles{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.roles button,.primary,.ghost{width:100%;min-height:54px;border-radius:15px;font:inherit;font-weight:850;cursor:pointer;touch-action:manipulation;transition:transform .15s ease,box-shadow .15s ease,border-color .15s ease}
+.roles button{background:rgba(255,255,255,.035);color:#ded9ce;border:1px solid rgba(255,255,255,.11)}
+.roles button:hover,.roles button:active{border-color:rgba(247,183,24,.55);box-shadow:0 0 20px rgba(247,183,24,.09);transform:translateY(-1px)}
+.roles button.selected{color:#fff5d2;border-color:rgba(247,183,24,.8);background:linear-gradient(135deg,rgba(247,183,24,.16),rgba(255,138,0,.07))}
+.form{display:grid;gap:12px;margin-top:16px}
+.form input{width:100%;height:56px;padding:0 16px;background:rgba(255,255,255,.035);color:#fff;border:1px solid rgba(255,255,255,.13);border-radius:15px;outline:none;font:inherit;box-shadow:inset 0 1px 0 rgba(255,255,255,.025)}
+.form input::placeholder{color:#77736b}
+.form input:focus{border-color:rgba(247,183,24,.72);box-shadow:0 0 0 3px rgba(247,183,24,.08),0 0 18px rgba(247,183,24,.07)}
+.primary{color:#15110a;border:0;background:linear-gradient(100deg,#ffc72c,#f6a800,#ff7900);box-shadow:0 12px 30px rgba(255,155,0,.2);font-size:16px;letter-spacing:.3px}
+.primary:hover,.primary:active{transform:translateY(-1px);box-shadow:0 15px 34px rgba(255,155,0,.28)}
+.ghost{background:rgba(255,255,255,.035);color:#d2cec4;border:1px solid rgba(255,255,255,.1)}
+.ghost:hover{border-color:rgba(247,183,24,.35)}
+.title{font-size:22px;font-weight:900;margin-top:3px;color:#fff8e7}
+.muted{color:var(--muted);font-size:13px;margin-top:5px}
+.status{min-height:20px;margin-top:7px;color:#ffb0a8;font-size:13px;line-height:1.4}
+.back{text-align:center;margin-top:22px;color:#8f8b82;font-size:12px;line-height:1.8}
+.back a{color:#e9c96e;text-decoration:none;font-weight:800}
+.hidden{display:none!important}
+@media(max-width:430px){body{padding:14px}.box{padding:28px 20px 22px;border-radius:25px}.logo-wrap{width:88px;height:88px}.brand{font-size:27px}.roles{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main class="box">
+  <div class="logo-wrap"><img class="logo" src="../assets/assam-drive-logo.jpg" alt="Assam Drive"></div>
+  <div class="brand">Assam Drive</div>
+  <div class="sub">YOUR RIDE • OUR ASSAM</div>
+
+  <section id="role">
+    <div class="role-title">Continue as</div>
+    <div class="roles">
+      <button type="button" data-role="CUSTOMER">👤 Customer</button>
+      <button type="button" data-role="DRIVER">🚗 Driver</button>
+    </div>
+  </section>
+
+  <section id="form" class="hidden">
+    <div class="title" id="heading">Customer Login</div>
+    <div class="muted">Use your Gmail/email and password.</div>
+    <div class="form">
+      <input id="email" type="email" autocomplete="email" placeholder="Gmail / Email">
+      <input id="password" type="password" autocomplete="current-password" placeholder="Password">
+      <button class="primary" id="submit" type="button">🔐 Secure Login</button>
+      <button class="ghost" id="change" type="button">← Change account type</button>
+    </div>
+    <div class="status" id="status"></div>
+  </section>
+
+  <div class="back">
+    <a href="../index.html">← Back to Assam Drive</a> ·
+    <a href="./forgot-password.html">Forgot Password?</a>
+  </div>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="./login.js"></script>
+</body>
+</html>
