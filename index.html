@@ -916,10 +916,25 @@ async function initSupabaseAuth(){
 
     const handleSession=async(session)=>{
       if(!session?.user){state.session=null;render();return false}
-      const pendingRole=localStorage.getItem('assam_drive_pending_role');
-      const role=session.user.app_metadata?.role||session.user.user_metadata?.requested_role||pendingRole||state.session?.role||'CUSTOMER';
-      localStorage.removeItem('assam_drive_pending_role');
+
+      // The authenticated user's profile in Supabase is the ONLY source of
+      // truth for Customer vs Driver. Never trust URL/localStorage/metadata
+      // role values for dashboard authorization.
+      let role='';
+      if(supabaseReady&&supabase){
+        const account=await supabase.rpc('get_my_account_role');
+        if(account.error)throw account.error;
+        role=account.data?.role||'';
+      }
+      if(role!=='CUSTOMER'&&role!=='DRIVER'){
+        state.session=null;
+        render();
+        throw new Error('Account role could not be verified.');
+      }
+
+      localStorage.setItem('assam_drive_pending_role',role);
       await establishSupabaseUser(role,session.user);
+      localStorage.removeItem('assam_drive_pending_role');
       return true;
     };
 
