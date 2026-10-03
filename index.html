@@ -908,37 +908,48 @@ function handleUserLocation(p,centerMap){
 
 async function initSupabaseAuth(){
   try{
-    // Never keep the branded splash waiting for the network.
-    // Render the app immediately, then restore the Supabase session in the background.
+    // Render immediately, then restore the Supabase session in the background.
     render();
     hideSplash();
     if(!supabaseReady||!supabase)return;
-    const {data,error}=await supabase.auth.getSession();
-    if(error)console.warn('Supabase session check:',error);
-    if(data?.session?.user){
+
+    const handleSession=async(session)=>{
+      if(!session?.user){state.session=null;render();return false}
       const pendingRole=localStorage.getItem('assam_drive_pending_role');
-      const role=data.session.user.app_metadata?.role||data.session.user.user_metadata?.requested_role||pendingRole||state.session?.role||'CUSTOMER';
+      const role=session.user.app_metadata?.role||session.user.user_metadata?.requested_role||pendingRole||state.session?.role||'CUSTOMER';
       localStorage.removeItem('assam_drive_pending_role');
-      await establishSupabaseUser(role,data.session.user);
-    }else state.session=null;
+      await establishSupabaseUser(role,session.user);
+      return true;
+    };
+
+    // Register the listener BEFORE getSession so a fast login redirect cannot
+    // lose the auth event between page startup and session restoration.
     supabase.auth.onAuthStateChange((event,session)=>{
       if(event==='PASSWORD_RECOVERY'){showPasswordRecovery();return}
       if(session?.user){
-        if(authFlowStage==='SIGNUP'){
-          /* Signup is intentionally not logged into the app until password setup finishes. */
-          return;
-        }
+        if(authFlowStage==='SIGNUP')return;
         if(authFlowStage==='RECOVERY' || localStorage.getItem('assam_drive_password_recovery')==='1' || passwordRecoveryOtpPending){
           passwordRecoveryOtpPending=true;
           showPasswordRecovery();
           return;
         }
-        const pendingRole=localStorage.getItem('assam_drive_pending_role');
-        const role=session.user.app_metadata?.role||session.user.user_metadata?.requested_role||pendingRole||state.session?.role||'CUSTOMER';
-        localStorage.removeItem('assam_drive_pending_role');
-        establishSupabaseUser(role,session.user).then(()=>{closeModal('authModal');render()}).catch(e=>console.warn('Auth state sync:',e));
-      }else{state.session=null;closeSide();render()}
+        handleSession(session).then(()=>{closeModal('authModal');render()}).catch(e=>console.warn('Auth state sync:',e));
+      }else{
+        state.session=null;
+        closeSide();
+        render();
+      }
     });
+
+    // Give storage a moment to settle, then check it directly. Retry briefly
+    // because mobile browsers can restore the Supabase session asynchronously.
+    let restored=false;
+    for(let attempt=0;attempt<3&&!restored;attempt++){
+      const {data,error}=await supabase.auth.getSession();
+      if(error)console.warn('Supabase session check:',error);
+      restored=await handleSession(data?.session);
+      if(!restored&&attempt<2)await new Promise(r=>setTimeout(r,350));
+    }
     render();
   }catch(e){
     console.error('Supabase auth initialization failed:',e);
