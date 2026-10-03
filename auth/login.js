@@ -47,16 +47,16 @@ $('submit').onclick=async()=>{
     if(error)throw error;
     if(!data?.user||!data?.session)throw new Error('Login session was not created. Please try again.');
 
-    // Tell index.html which dashboard to open after the redirect.
-    localStorage.setItem('assam_drive_pending_role',role);
+    // Never trust the Customer/Driver button selection as the account role.
+    // The backend profile is the source of truth.
+    const profileResult=await db.rpc('get_my_account_role');
+    if(profileResult.error)throw profileResult.error;
+    const accountRole=profileResult.data?.role;
+    if(accountRole!=='CUSTOMER'&&accountRole!=='DRIVER'){
+      throw new Error('Your account role could not be verified. Please contact Assam Drive support.');
+    }
 
-    // Keep the profile synced, but do not block login if this optional sync fails.
-    const {error:profileError}=await db.rpc('ensure_my_profile',{
-      p_role:role,
-      p_name:data.user.user_metadata?.full_name||'',
-      p_phone:data.user.user_metadata?.mobile_number||''
-    });
-    if(profileError)console.warn('Profile sync after login:',profileError.message);
+    localStorage.setItem('assam_drive_pending_role',accountRole);
 
     // Supabase has returned a real session; now open the authenticated app.
     const {data:check,error:checkError}=await db.auth.getSession();
