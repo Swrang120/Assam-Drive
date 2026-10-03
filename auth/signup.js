@@ -56,6 +56,26 @@ document.addEventListener('DOMContentLoaded', () => {
     setStatus('Sending verification OTP to ' + email + '…');
 
     try {
+      // Customer signup must pass the database identity check before OTP is sent.
+      // This prevents reusing an already registered Gmail or mobile number.
+      if (role === 'CUSTOMER') {
+        const check = await db.rpc('check_customer_signup', {
+          p_email: email,
+          p_phone: '+91' + phone
+        });
+        if (check.error) throw check.error;
+        if (!check.data?.allowed) {
+          const reason = check.data?.reason;
+          if (reason === 'EMAIL_EXISTS') {
+            throw new Error('This Gmail is already registered. Please login instead.');
+          }
+          if (reason === 'PHONE_EXISTS') {
+            throw new Error('This mobile number is already registered. Please login instead.');
+          }
+          throw new Error('This customer information is already registered. Please login instead.');
+        }
+      }
+
       const { error } = await db.auth.signInWithOtp({
         email,
         options: {
@@ -138,7 +158,7 @@ document.addEventListener('DOMContentLoaded', () => {
     button.textContent = 'Creating account…';
 
     try {
-      const { error } = await db.auth.updateUser({
+      const { data, error } = await db.auth.updateUser({
         password,
         data: {
           requested_role: role,
@@ -148,7 +168,23 @@ document.addEventListener('DOMContentLoaded', () => {
       });
 
       if (error) throw error;
+      if (!data?.user) throw new Error('Account session was not created. Please try again.');
 
+      if (role === 'CUSTOMER') {
+        // Persist the customer profile in public.profiles before opening the dashboard.
+        const profile = await db.rpc('ensure_my_profile', {
+          p_role: 'CUSTOMER',
+          p_name: $('name').value.trim(),
+          p_phone: '+91' + $('phone').value.replace(/\D/g, '')
+        });
+        if (profile.error) throw profile.error;
+
+        localStorage.setItem('assam_drive_pending_role', 'CUSTOMER');
+        location.href = '../index.html';
+        return;
+      }
+
+      // Driver flow is intentionally left unchanged for now.
       await db.auth.signOut();
       location.href = './login.html';
     } catch (error) {
