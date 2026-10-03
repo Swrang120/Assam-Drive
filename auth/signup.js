@@ -44,7 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (!/^\S+@\S+\.\S+$/.test(email)) {
       setStatus('Please enter a valid Gmail/email address.');
       $('email').focus();
       return;
@@ -52,29 +52,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const button = $('send');
     button.disabled = true;
-    button.textContent = 'Sending OTP…';
-    setStatus('Sending verification OTP to ' + email + '…');
+    button.textContent = 'Checking account…';
+    setStatus('Checking Gmail and mobile number…');
 
     try {
-      // Customer signup must pass the database identity check before OTP is sent.
-      // This prevents reusing an already registered Gmail or mobile number.
-      if (role === 'CUSTOMER') {
-        const check = await db.rpc('check_customer_signup', {
-          p_email: email,
-          p_phone: '+91' + phone
-        });
-        if (check.error) throw check.error;
-        if (!check.data?.allowed) {
-          const reason = check.data?.reason;
-          if (reason === 'EMAIL_EXISTS') {
-            throw new Error('This Gmail is already registered. Please login instead.');
-          }
-          if (reason === 'PHONE_EXISTS') {
-            throw new Error('This mobile number is already registered. Please login instead.');
-          }
-          throw new Error('This customer information is already registered. Please login instead.');
+      const check = await db.rpc('check_account_signup', {
+        p_email: email,
+        p_phone: '+91' + phone,
+        p_role: role
+      });
+
+      if (check.error) throw check.error;
+
+      if (!check.data?.allowed) {
+        const reason = check.data?.reason;
+        if (reason === 'EMAIL_EXISTS') {
+          throw new Error('This Gmail is already registered. Please login. The same Gmail cannot be used for another account type.');
         }
+        if (reason === 'PHONE_EXISTS') {
+          throw new Error('This mobile number is already registered. Please login. It cannot be used for another account.');
+        }
+        throw new Error('This account information is already registered. Please login.');
       }
+
+      button.textContent = 'Sending OTP…';
+      setStatus('Sending verification OTP to ' + email + '…');
 
       const { error } = await db.auth.signInWithOtp({
         email,
@@ -97,7 +99,7 @@ document.addEventListener('DOMContentLoaded', () => {
       button.disabled = false;
     } catch (error) {
       console.error('OTP send error:', error);
-      setStatus(error?.message || 'OTP could not be sent. Please try again.');
+      setStatus(error?.message || 'Account check/OTP failed. Please try again.');
       button.textContent = '📩 Send Gmail OTP';
       button.disabled = false;
     }
@@ -125,7 +127,9 @@ document.addEventListener('DOMContentLoaded', () => {
       });
 
       if (error) throw error;
-      if (!data?.user) throw new Error('Verification failed. Please request a new OTP.');
+      if (!data?.user || !data?.session) {
+        throw new Error('Verification did not create a valid account session. Please request a new OTP.');
+      }
 
       $('passBox').classList.remove('hidden');
       $('otpBox').classList.add('hidden');
@@ -170,23 +174,22 @@ document.addEventListener('DOMContentLoaded', () => {
       if (error) throw error;
       if (!data?.user) throw new Error('Account session was not created. Please try again.');
 
-      if (role === 'CUSTOMER') {
-        // Persist the customer profile in public.profiles before opening the dashboard.
-        const profile = await db.rpc('ensure_my_profile', {
-          p_role: 'CUSTOMER',
-          p_name: $('name').value.trim(),
-          p_phone: '+91' + $('phone').value.replace(/\D/g, '')
-        });
-        if (profile.error) throw profile.error;
+      const profile = await db.rpc('ensure_my_profile', {
+        p_role: role,
+        p_name: $('name').value.trim(),
+        p_phone: '+91' + $('phone').value.replace(/\D/g, '')
+      });
 
-        localStorage.setItem('assam_drive_pending_role', 'CUSTOMER');
-        location.href = '../index.html';
-        return;
+      if (profile.error) throw profile.error;
+      if (profile.data?.role !== role) {
+        throw new Error('Account role verification failed. Please contact Assam Drive support.');
       }
 
-      // Driver flow is intentionally left unchanged for now.
-      await db.auth.signOut();
-      location.href = './login.html';
+      localStorage.setItem('assam_drive_pending_role', role);
+
+      // Keep the verified Supabase session. index.html will read the backend
+      // role and open exactly the matching Customer/Driver dashboard.
+      location.replace('../index.html?login=success');
     } catch (error) {
       console.error('Account creation error:', error);
       setStatus(error?.message || 'Account could not be created.');
